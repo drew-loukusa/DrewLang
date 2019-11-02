@@ -6,30 +6,11 @@ from drewLexer import Lexer
 
 # Setup input information:
 input = 'print ( ) { } [] , . : ; =  1 10 - + * \\ / \' " '
+input = 'print("Hello"); x = 0; foo = "bar";'
 
-# Symbol dict for configuring the lexer to my grammar:
-symbols = {
-    "NAME":'multi',
-    "NUMBER":'multi', 
-    "COMMA":',', 
-    "PERIOD": '.',
-    "LPAREN":'(', 
-    "RPAREN":')', 
-    "LCURBRACK":'{',
-    "RCURBRACK":'}', 
-    "LBRACK":"[",
-    "RBRACK":"]",
-    "SEMICOLON":';',
-    "COLON":':',
-    "EQUALS":'=', 
-    "QOUTE":"'",
-    "DQUOTE":'"',
-    "STAR":"*",
-    "PLUS":"+",
-    "DASH":"-",
-    "FSLASH":"/",
-    "BSLASH":"\\",
-    }
+# Read in token names and chars to pass into the lexer:
+fpath = "tokens.txt"
+symbols = { l.split()[0]:l.split()[1] for l in open(fpath).readlines() }
 
 # The order in which you set multi char recognizers here is the order in which the lexer
 # will test the input string. Format: List of tuples: [ (TOKEN_NAME, Recognizer for start of token)]
@@ -52,7 +33,7 @@ while t._type != lexer.EOF_TYPE:
     t = lexer.nextToken()
 print(t)
 
-print("--------------------------\n", lexer.__dict__)
+#Sprint("--------------------------\n", lexer.__dict__)
 #print(lexer.__getattribute__("NAME"))
 
 

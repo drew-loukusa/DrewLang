@@ -12,15 +12,15 @@ class Lexer:
     EOF_TYPE = 1        # Represent EOF Token type
 
     def __init__(self, input, symbols, multi_char_recognizers):
-        self.input = input
-        self.p = 0
-        self.c = self.input[self.p]  
+        self.input = input              # Duh
+        self.p = 0                      # Position in the input string
+        self.c = self.input[self.p]     # Current char under pointed at by 'p'
 
-        self.tokenNames = ["n/a", "<EOF>",]
+        self.tokenNames = ["n/a", "<EOF>",] # All token_type names as strings in a list
 
         # # Maps each singular char "token" string to it's respective token type.
         # # Used by nextToken() to lex said token strings. 
-        self.char_to_ttype = {}
+        self.char_to_ttype = {} 
 
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
@@ -31,16 +31,22 @@ class Lexer:
             if char != 'multi': 
                 self.char_to_ttype[char] = i # Add char:token_name pairing to dict (Only for single char tokens)
             
-        self.multi_char_recognizers = multi_char_recognizers
+        self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
 
     def consume(self):
+        """ Increments instance field 'p' by one and sets 
+            instance field 'c' to the next char in the input string """
         self.p += 1
-        if self.p >= len(self.input):self.c = self.EOF 
-        else: self.c = self.input[self.p]
-
+        if self.p >= len(self.input):
+            self.c = self.EOF 
+        else: 
+            self.c = self.input[self.p]
+        
     def match(self, x):
-        if self.c == x: self.consume()
-        else: raise Exception(f"Expecting {x}; found {self.c}")
+        if self.c == x: 
+            self.consume()
+        else: 
+            raise Exception(f"Expecting {x}; found {self.c}")
 
     def getTokenName(self, x): 
         return self.tokenNames[x]
@@ -59,9 +65,12 @@ class Lexer:
         return Token(token_type, multichar, self.getTokenName(token_type))
 
     def _WS(self):
+        """ Consumes whitespace until a non-whitespace char is encountered. """
         while self.c in [' ','\t','\n','\r']: self.consume()
 
     def nextToken(self):
+        """ Returns the next char in the input string. 
+            If there is no next char, returns <EOF> (End of File) """
         while self.c != Lexer.EOF: 
             # Handle Whitespace:
             # ----------------------------------------
