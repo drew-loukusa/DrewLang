@@ -1,0 +1,7 @@
+
+1. Make some basic syntax choices
+2. Make some basic typing choices 
+3. Create some goals: Want you want to implement first
+    * "Hello World" 
+    * Conditionals support 'if', 'else', 'for','while'
+    * Scoping? 

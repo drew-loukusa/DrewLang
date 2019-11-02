@@ -1,0 +1,23 @@
+
+# Current goal: Write a grammar that can 'define' the code in Example 1 below.
+# Then create a lexer, then a parser, then an AST. Use python to execute the code.
+
+
+# Example 1:
+#-------------------------
+var x = 0;
+if (x == 0) {
+    print("x == 0");
+}
+
+
+
+###########################
+
+
+int x = 0;
+if (x == 1) {
+    print("x == 1");
+} else {
+    print("x == 0"); 
+}

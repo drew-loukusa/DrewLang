@@ -1,0 +1,61 @@
+Uhhhh.
+
+I'm just going to whole cloth copy Python but ditch the whitespace thing because I don't want to deal 
+with making a parser that can support that.
+
+*   Statments:
+    ---------------------------------------------------------------------------
+    All statements must be terminated by a semi colon ';'
+    > This allows me to ignore whitespace for the most part when parsing. My life is easier now.
+
+    Block Statements: {}
+    > Do we terminate block statements with a ';' ? Would make my life easier but we'll see I guess.
+
+    Wait. So anything thats NOT a control flow structure or a func def is required to be terminated with a ';' ?
+    I think yes. 
+
+*   Function definitions:
+    ---------------------------------------------------------------------------
+    Start with 'def' followed by a name with parens and a pair 
+    of curly brackets: def funcname() {}
+    > Allowed forms: 
+        def funcname () {} 
+        def funcname(){}
+
+    I'll have to come back to this? I don't know if it's easier to include return types in function defs 
+    or not, but I'm going to start with NO return types becaues I like that. 
+
+    Maybe I could add some annotation feature like python 3 has now.
+
+    It might be nice to have something that differentiates between functions that return something 
+    and functions that DON'T return anything. Maybe just 'def' and 'nr def'. 
+
+    Of course, then you have decide if you want to enforce that difference. Is it JUST an annotation with
+    no effect on the code or will your "Compiler or Interpreter" look for a return in "def" functions? 
+
+    Okay so maybe, we have return types which would be enforced, but also allow for generic return types 
+    AND no return type. So maybe:
+        int func() {} --> returns int
+        str func() {} --> returns str 
+        def func() {} --> returns ??? (But it will return SOMETHING, and this will be enforced???)
+            > This is a generic function. Could maybe change 'def' to 'var' or something else. 
+        nor func() {} --> returns nothing. "nor" --> "No return" 
+
+
+
+*   Control statements:
+    ---------------------------------------------------------------------------
+    Control name, parens, then brackets:
+    > if(){}
+    That's valid to make my parsing easier. I counld enforce having a statement inside the parens but whatevs.
+
+*   Data:
+    ---------------------------------------------------------------------------
+    Looks like I'm leaning towards "Optional Static Typing" ? Static typing but I also have 
+    a generic type word like "var" or "auto" so that you can write geneic functions. 
+
+    That comes AFTER figuring a buncha shit out I guess. 
+
+*   Comments:
+    ---------------------------------------------------------------------------
+    '#' is to denote comments
