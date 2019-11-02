@@ -1,25 +1,34 @@
 import sys
 import os
-from drewLexer import DLexer
+from drewLexer import Lexer
 
 #lexer = DLexer(sys.argv[0])
 
 # Setup input information:
-input = 'print("hello") { } , =  23 *'
+input = 'print ( ) { } [] , . : ; =  1 10 - + * \\ / \' " '
 
 # Symbol dict for configuring the lexer to my grammar:
 symbols = {
     "NAME":'multi',
     "NUMBER":'multi', 
     "COMMA":',', 
+    "PERIOD": '.',
     "LPAREN":'(', 
     "RPAREN":')', 
     "LCURBRACK":'{',
     "RCURBRACK":'}', 
+    "LBRACK":"[",
+    "RBRACK":"]",
     "SEMICOLON":';',
-    "EQUALSIGN":'=', 
-    "QUOTE":'"',
+    "COLON":':',
+    "EQUALS":'=', 
+    "QOUTE":"'",
+    "DQUOTE":'"',
     "STAR":"*",
+    "PLUS":"+",
+    "DASH":"-",
+    "FSLASH":"/",
+    "BSLASH":"\\",
     }
 
 # The order in which you set multi char recognizers here is the order in which the lexer
@@ -35,7 +44,7 @@ multi_char_recognizers = [
 
 # Create lexer object, feed it my input and my symbols. 
 # It will automatically populate an instance with the appropriate fields as needed
-lexer = DLexer(input, symbols, multi_char_recognizers)
+lexer = Lexer(input, symbols, multi_char_recognizers)
 
 t = lexer.nextToken()
 while t._type != lexer.EOF_TYPE:

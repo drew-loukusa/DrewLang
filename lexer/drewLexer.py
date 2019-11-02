@@ -1,5 +1,3 @@
-from lexer import Lexer 
-
 class Token:
     def __init__(self, ttype, text, tname):
         self._tname = tname     # Token type as a string
@@ -8,7 +6,7 @@ class Token:
     
     def __str__(self): return f"<'{self._text}', {self._tname}>"
 
-class DLexer:
+class Lexer:
     
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
