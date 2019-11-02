@@ -45,12 +45,6 @@ class Lexer:
     def getTokenName(self, x): 
         return self.tokenNames[x]
 
-    def isLetter(self): 
-        return (self.c>= 'a' and self.c <= 'z') or (self.c >= 'A' and self.c <= 'Z') 
-
-    def isDigit(self): 
-        return self.c >= '0' and self.c <= '9'
-    
     def parseMultiChar(self, char_selector, token_type):
         """ Used to parse multi char tokens. 
             * char_selector: Function for recognizing a given char
@@ -63,10 +57,6 @@ class Lexer:
             multichar += self.c
             self.consume()
         return Token(token_type, multichar, self.getTokenName(token_type))
-
-    #def _NAME(self): return self.__parseMultiChar(self.isLetter, self.NAME)
-
-    #def _NUMBER(self): return self.__parseMultiChar(self.isDigit, self.NUMBER)
 
     def _WS(self):
         while self.c in [' ','\t','\n','\r']: self.consume()
