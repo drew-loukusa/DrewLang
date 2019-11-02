@@ -8,11 +8,16 @@ class Token:
     
     def __str__(self): return f"<'{self._text}', {self._tname}>"
 
-class DLexer(Lexer):
-  
+class DLexer:
+    
+    EOF = chr(0)        # Represent EOF char
+    EOF_TYPE = 1        # Represent EOF Token type
+
     def __init__(self, input, symbols, multi_char_recognizers):
-        super().__init__(input)
-  
+        self.input = input
+        self.p = 0
+        self.c = self.input[self.p]  
+
         self.tokenNames = ["n/a", "<EOF>",]
 
         # # Maps each singular char "token" string to it's respective token type.
@@ -29,6 +34,15 @@ class DLexer(Lexer):
                 self.char_to_ttype[char] = i # Add char:token_name pairing to dict (Only for single char tokens)
             
         self.multi_char_recognizers = multi_char_recognizers
+
+    def consume(self):
+        self.p += 1
+        if self.p >= len(self.input):self.c = self.EOF 
+        else: self.c = self.input[self.p]
+
+    def match(self, x):
+        if self.c == x: self.consume()
+        else: raise Exception(f"Expecting {x}; found {self.c}")
 
     def getTokenName(self, x): 
         return self.tokenNames[x]
