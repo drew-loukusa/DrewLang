@@ -24,10 +24,7 @@ symbols = {
 
 # The order in which you set multi char recognizers here is the order in which the lexer
 # will test the input string. Format: List of tuples: [ (TOKEN_NAME, Recognizer for start of token)]
-multi_char_recognizers = [
-    (
-        "SWEAR", lambda c: c in '%$^&*$#'
-    ),
+multi_char_recognizers = [ 
     (
         "NAME", lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') # isLetter
     ), 
