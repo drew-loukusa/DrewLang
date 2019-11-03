@@ -1,3 +1,28 @@
+""" A user configurable lexer. 
+
+    In order to use this lexer module:
+    
+    * Create a newline seperated list of symbols in a file:
+        > <TOKEN_NAME>    <token_char> # Format
+        > COMMA         ,              # Example
+
+        > For any multi char tokens:
+            > <TOKEN_NAME>    multi # Format        
+            > NAME            multi # Example
+
+    * For any multi char tokens: 
+        > Implement a function:
+            * A recognizer  -> Recognizes the start symbol of a given token
+
+        > Put NAME, recognizer, and Builder in a tuple list:
+            * multi_char_recogs = [ (NAME,recog), etc etc ]
+
+    The lexer will automatically create fields for every token name in the file.
+    The lexer will use the provided recognizer function to lex multi char tokens.
+
+    For an example, see the DLexer module.
+
+ """
 class Token:
     def __init__(self, ttype, text, tname):
         self._tname = tname     # Token type as a string
@@ -11,7 +36,7 @@ class Lexer:
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
 
-    def __init__(self, input, symbols, multi_char_recognizers):
+    def __init__(self, input, token_defs, multi_char_recognizers):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
@@ -24,8 +49,8 @@ class Lexer:
 
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
-        for name, i in zip(symbols, range( 2, len(symbols) + 2) ):
-            char = symbols[name]
+        for name, i in zip(token_defs, range( 2, len(token_defs) + 2) ):
+            char = token_defs[name]
             self.__setattr__(name,i)        # Set instance field
             self.tokenNames.append(name)    # Add token_name to list of token names
             if char != 'multi': 
