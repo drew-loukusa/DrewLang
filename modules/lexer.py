@@ -1,4 +1,4 @@
-""" A user configurable lexer. 
+""" This module contains a user configurable lexer.
 
     In order to use this lexer module:
     
@@ -20,8 +20,27 @@
     The lexer will automatically create fields for every token name in the file.
     The lexer will use the provided recognizer function to lex multi char tokens.
 
-    For an example, see the DLexer module.
+    For an example, see the d_lexer module.
 
+    You do not have to do the above actions in a class, but I recommend doing so. 
+
+    My recommendation: 
+        1.  Create a class which inherits from Lexer
+        2.  In your __init__() function, setup the prescribed above actions and 
+            then call super().__init__(...) 
+
+        Ex: 
+            class DLexer(Lexer): 
+                # Read in token definitions from file:
+                fpath="token_defs.txt"
+                token_defs = { l.split()[0]:l.split()[1] for l in open(fpath).readlines() }
+
+                # Functions to configure the lexer
+                isLetter = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
+                isDigit  = lambda c: c >= '0' and c <= '9'
+                multi_char_recognizers = [ ("NAME", isLetter), ("NUMBER", isDigit) ]    
+                
+                super().__init__(input, token_defs, multi_char_recognizers)        
  """
 class Token:
     def __init__(self, ttype, text, tname):
@@ -36,7 +55,7 @@ class Lexer:
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
 
-    def __init__(self, input, token_defs, multi_char_recognizers):
+    def __init__(self, input, fpath, multi_char_recognizers):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
@@ -46,6 +65,9 @@ class Lexer:
         # # Maps each singular char "token" string to it's respective token type.
         # # Used by nextToken() to lex said token strings. 
         self.char_to_ttype = {} 
+
+        # Read in token definitions from file:
+        token_defs = { l.split()[0]:l.split()[1] for l in open(fpath).readlines() }
 
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
@@ -59,8 +81,8 @@ class Lexer:
         self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
 
     def consume(self):
-        """ Increments instance field 'p' by one and sets 
-            instance field 'c' to the next char in the input string """
+        """ Increments the char pointer int 'p' by one and sets 
+            'c' to the next char in the input string """
         self.p += 1
         if self.p >= len(self.input):
             self.c = self.EOF 

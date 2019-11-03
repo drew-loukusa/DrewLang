@@ -1,6 +1,6 @@
 import sys
 import os
-from drewLexer import Lexer
+from lexer import Lexer
 
 #lexer = DLexer(sys.argv[0])
 
@@ -10,7 +10,6 @@ input = 'print("Hello"); x = 0; foo = "bar";'
 
 # Read in token names and chars to pass into the lexer:
 fpath = "tokens.txt"
-symbols = { l.split()[0]:l.split()[1] for l in open(fpath).readlines() }
 
 # The order in which you set multi char recognizers here is the order in which the lexer
 # will test the input string. Format: List of tuples: [ (TOKEN_NAME, Recognizer for start of token)]
@@ -25,7 +24,7 @@ multi_char_recognizers = [
 
 # Create lexer object, feed it my input and my symbols. 
 # It will automatically populate an instance with the appropriate fields as needed
-lexer = Lexer(input, symbols, multi_char_recognizers)
+lexer = Lexer(input, fpath, multi_char_recognizers)
 
 t = lexer.nextToken()
 while t._type != lexer.EOF_TYPE:

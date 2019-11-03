@@ -6,4 +6,5 @@ class Parser:
     def __init__(self, input):
         self.lexer = DLexer(input)
 
-    
+    def foo(self):
+        self.lexer
