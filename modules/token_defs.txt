@@ -10,7 +10,9 @@ LBRACK       [
 RBRACK       ]
 SEMICOLON    ;
 COLON        :
-EQUALS       = 
+EQUALS       =
+GT           >
+LT           < 
 QOUTE        '
 DQUOTE       "
 STAR         *

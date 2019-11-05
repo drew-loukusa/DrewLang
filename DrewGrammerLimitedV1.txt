@@ -1,17 +1,16 @@
-Program         : STATEMENT   ;
-STATEMENT       : ASSIGNSTAT  STATEMENT
-                | PRINTSTAT   STATEMENT        
-                | BLOCKSTAT   STATEMENT
-                | IFSTAT      STATEMENT
-                | WHILESTAT   STATEMENT
-                |
+Program         : STATEMENT *;
+STATEMENT       : ASSIGNSTAT  
+                | PRINTSTAT           
+                | BLOCKSTAT   
+                | IFSTAT      
+                | WHILESTAT   
                 ;
 
 ASSIGNSTAT      : ID '=' EXPR ';'                       ;
 PRINTSTAT       : 'print' '(' (ID | EXPR) ')' ';'       ;
 IFSTAT          : 'if' '(' TEST ')' STATEMENT           ;
 WHILESTAT       : 'while' '(' TEST ')' STATEMENT        ;
-BLOCKSTAT       : '{'  STATEMENT  '}'                   ;
+BLOCKSTAT       : '{'  STATEMENT *  '}'                   ;
 
 ID              : ('a'..'z' | 'A'..'Z')+                ;
 EXPR            : (NUMBER | STRING )                    ;

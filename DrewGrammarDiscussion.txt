@@ -64,3 +64,5 @@ STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"' ;
 NUMBER          : ('0'..'9') +                              ;
 
 CMP_OP          : '==' | '>=' | '<=' | '>' | '<'        ;
+
+I'm going to try to use the grammar with the * synatx however. 

@@ -8,9 +8,8 @@ from lexer import Lexer
     For more details, see the Lexer class in the lexer.py module"""
 
 class DLexer(Lexer):
-    
     def __init__(self, input):
-    
+
         # Token defitions file location:
         fpath="token_defs.txt"
 
@@ -22,3 +21,7 @@ class DLexer(Lexer):
         super().__init__(input, fpath, multi_char_recognizers)        
      
         
+    # NOTE: The below line is just so I have member names to reference since I dynamically create my lexer at runtime.
+    NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
+    LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQOUTE, STAR, \
+    PLUS, DASH, FSLASH, BSLASH = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
