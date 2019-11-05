@@ -60,7 +60,7 @@ class Lexer:
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
 
-        self.tokenNames = ["n/a", "<EOF>",] # All token_type names as strings in a list
+        self.tokenNames = ["<EOF>",] # All token_type names as strings in a list
 
         # # Maps each singular char "token" string to it's respective token type.
         # # Used by nextToken() to lex said token strings. 
