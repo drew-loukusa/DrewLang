@@ -23,8 +23,18 @@ class DLexer(Lexer):
         isDigit  = lambda c: c >= '0' and c <= '9'
         multi_char_recognizers = [ ("NAME", isLetter), ("NUMBER", isDigit) ]
 
-        super().__init__(input, fpath, multi_char_recognizers)        
-     
-        print("YO YO, WE SHOULD BE LOADED UP BOI")
-        
-    
+        super().__init__(input, fpath, multi_char_recognizers)
+
+if __name__ == "__main__":
+    input = \
+"""x=0;
+print("Helloworld");
+if(x==0){
+    print("xis0");
+    x=1;
+}
+"""
+    lox = DLexer(input) 
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("DLexer Class after initialization:")
+    for k,v in lox.__dict__.items(): print(f"{k}\t: {v}")

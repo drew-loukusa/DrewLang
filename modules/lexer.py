@@ -75,8 +75,7 @@ class Lexer:
             char = token_defs[name]
             self.__setattr__(name,i)        # Set instance field
             self.tokenNames.append(name)    # Add token_name to list of token names
-            if char != 'multi': 
-                self.char_to_ttype[char] = i # Add char:token_name pairing to dict (Only for single char tokens)
+            self.char_to_ttype[char] = i    # Add char:token_name pairing to dict 
             
         self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
 
@@ -89,16 +88,19 @@ class Lexer:
         else: 
             self.c = self.input[self.p]
         
-    def match(self, x):
-        if self.c == x: 
+    def match(self, token_type: int):
+        if self.c == token_type: 
             self.consume()
         else: 
-            raise Exception(f"Expecting {x}; found {self.c}")
+            raise Exception(f"Expecting {token_type}; found {self.c}")
 
-    def getTokenName(self, x): 
-        return self.tokenNames[x]
+    def getTokenName(self, token_type: int) -> str:
+        return self.tokenNames[token_type]
+    
+    def getTokenType(self, token_name: str) -> int:
+        return self.char_to_ttype[token_name]
 
-    def parseMultiChar(self, char_selector, token_type):
+    def parseMultiChar(self, char_selector, token_type: int) -> Token:
         """ Used to parse multi char tokens. 
             * char_selector: Function for recognizing a given char
             * token_type: The type the returned token should be.
@@ -137,7 +139,7 @@ class Lexer:
             # Handle single character tokens:
             # ----------------------------------------
             for c,ttype in self.char_to_ttype.items():
-                if self.c == c: 
+                if self.c == c and ttype != "multi": 
                     self.consume()
                     return Token(ttype, c, self.getTokenName(ttype))
 

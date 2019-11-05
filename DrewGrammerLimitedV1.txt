@@ -1,22 +1,22 @@
-Program         : STATEMENT *;
-STATEMENT       : ASSIGNSTAT  
-                | PRINTSTAT           
-                | BLOCKSTAT   
-                | IFSTAT      
-                | WHILESTAT   
+Program         : statement *;
+statement       : assignstat  
+                | printstat           
+                | blockstat   
+                | ifstat      
+                | whilestat   
                 ;
 
-ASSIGNSTAT      : ID '=' EXPR ';'                       ;
-PRINTSTAT       : 'print' '(' (ID | EXPR) ')' ';'       ;
-IFSTAT          : 'if' '(' TEST ')' STATEMENT           ;
-WHILESTAT       : 'while' '(' TEST ')' STATEMENT        ;
-BLOCKSTAT       : '{'  STATEMENT *  '}'                   ;
+assignstat      : NAME '=' expr ';'                         ;
+printstat       : 'print' '(' (NAME | expr) ')' ';'         ;
+ifstat          : 'if' '(' test ')' statement               ;
+whilestat       : 'while' '(' test ')' statement            ;
+blockstat       : '{'  statement *  '}'                     ;
 
-ID              : ('a'..'z' | 'A'..'Z')+                ;
-EXPR            : (NUMBER | STRING )                    ;
-TEST            : (ID | EXPR) CMP_OP (ID | EXPR)        ;
 
-STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"' ;
-NUMBER          : ('0'..'9') +                              ;
+expr            : (NUMBER | STRING )                            ;
+test            : (NAME | expr) CMP_OP (NAME | expr)            ;
 
-CMP_OP          : '==' | '>=' | '<=' | '>' | '<'        ;
+NAME            : ('a'..'z' | 'A'..'Z')+                        ;
+STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"'     ;
+NUMBER          : ('0'..'9') +                                  ;
+CMP_OP          : '==' | '>=' | '<=' | '>' | '<'                ;

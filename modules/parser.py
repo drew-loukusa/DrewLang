@@ -31,91 +31,91 @@ class Parser:
         else:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)}.")
 
-    def PROGRAM(self):
+    def program(self):
         while self.LA(1) != self.input.EOF_TYPE:
             print(f"EOF: {self.input.EOF}")
             print("Top level statement call")
             tab = 0
-            self.STATEMENT(tab+1)
+            self.statement(tab+1)
     
-    def STATEMENT(self, tab=0): 
+    def statement(self, tab=0): 
         print('  '*tab,"STATEMENT", self.LT(1), self.LA(1))
         time.sleep(0.5)
-        if self.LT(1)._text == 'if': self.IFSTAT(tab+1)
-        elif self.LT(1)._text == 'while': self.WHILESTAT(tab+1)
-        elif self.LT(1)._text == 'print': self.PRINTSTAT(tab+1)
-        elif self.LA(1) == self.input.NAME: self.ASSIGNSTAT(tab+1)
-        elif self.LA(1) == self.input.LCURBRACK: self.BLOCKSTAT(tab+1)
+        if self.LT(1)._text == 'if': self.ifstat(tab+1)
+        elif self.LT(1)._text == 'while': self.whilestat(tab+1)
+        elif self.LT(1)._text == 'print': self.printstat(tab+1)
+        elif self.LA(1) == self.input.NAME: self.assignstat(tab+1)
+        elif self.LA(1) == self.input.LCURBRACK: self.blockstat(tab+1)
         
-    def ASSIGNSTAT(self, tab=0):
+    def assignstat(self, tab=0):
         print('  '*tab,"ASSIGNSTAT", self.LT(1))
         time.sleep(0.5)
-        self.ID(tab+1)   
+        self.NAME(tab+1)   
         self.match(self.input.EQUALS) 
-        self.EXPR(tab+1) 
+        self.expr(tab+1) 
         self.match(self.input.SEMICOLON)
 
-    def PRINTSTAT(self, tab=0): 
+    def printstat(self, tab=0): 
         print('  '*tab,"PRINTSTAT", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.NAME)     
         self.match(self.input.LPAREN)  
 
         if self.LA(1) == self.input.NAME:
-            self.ID(tab+1)
+            self.NAME(tab+1)
 
         elif self.LA(1) == self.input.DQUOTE or \
              self.LA(1) == self.input.NUMBER:
-            self.EXPR(tab+1)
+            self.expr(tab+1)
         
         self.match(self.input.RPAREN)       
         self.match(self.input.SEMICOLON)    
         
-    def BLOCKSTAT(self, tab=0): 
+    def blockstat(self, tab=0): 
         print('  '*tab,"BLOCKSTAT", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.LCURBRACK)
         while self.LA(1) != self.input.RCURBRACK:
-           self.STATEMENT(tab+1)
+           self.statement(tab+1)
         self.match(self.input.RCURBRACK)
 
-    def IFSTAT(self, tab=0): 
+    def ifstat(self, tab=0): 
         print('  '*tab,"IFTSTAT", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.NAME)
         self.match(self.input.LPAREN)
-        self.TEST(tab+1)
+        self.test(tab+1)
         self.match(self.input.RPAREN)
-        self.STATEMENT(tab+1)
+        self.statement(tab+1)
 
-    def WHILESTAT(self, tab=0): 
+    def whilestat(self, tab=0): 
         self.match(self.input.NAME)
         self.match(self.input.LPAREN)
-        self.TEST(tab+1)
+        self.test(tab+1)
         self.match(self.input.RPAREN)
-        self.STATEMENT(tab+1)
+        self.statement(tab+1)
 
-    def ID(self, tab=0): 
-        print('  '*tab,"ID", self.LT(1))
-        time.sleep(0.5)
-        self.match(self.input.NAME)
-        
-    def EXPR(self, tab=0): 
+    def expr(self, tab=0): 
         print('  '*tab,"EXPR",self.LT(1))
         if self.LA(1) == self.input.DQUOTE: self.STRING(tab+1)
         elif self.LA(1) == self.input.NUMBER: self.NUMBER(tab+1)
         print('  '*tab,self.LT(1))
         
-    def TEST(self, tab=0): 
+    def test(self, tab=0): 
         print('  '*tab,"TEST", self.LT(1))
         time.sleep(0.5)
-        if self.LA(1) == self.input.NAME: self.ID(tab+1)
-        else: self.EXPR(tab+1)
+        if self.LA(1) == self.input.NAME: self.NAME(tab+1)
+        else: self.expr(tab+1)
 
         self.CMP_OP(tab+1)
 
-        if self.LA(1) == self.input.NAME: self.ID(tab+1)
-        else: self.EXPR(tab+1)
+        if self.LA(1) == self.input.NAME: self.NAME(tab+1)
+        else: self.expr(tab+1)
+    
+    def NAME(self, tab=0): 
+        print('  '*tab,"ID", self.LT(1))
+        time.sleep(0.5)
+        self.match(self.input.NAME)
 
     def STRING(self, tab=0):   
         print('  '*tab,"STRING", self.LT(1))
@@ -164,4 +164,4 @@ if(x==0){
 }
 """
     drewparser = Parser(input, 2)
-    drewparser.PROGRAM()
+    drewparser.program()
