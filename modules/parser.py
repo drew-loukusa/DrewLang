@@ -35,100 +35,105 @@ class Parser:
         while self.LA(1) != self.input.EOF_TYPE:
             print(f"EOF: {self.input.EOF}")
             print("Top level statement call")
-            self.STATEMENT()
+            tab = 0
+            self.STATEMENT(tab+1)
     
-    def STATEMENT(self): 
-        print("STATEMENT", self.LT(1), self.LA(1))
+    def STATEMENT(self, tab=0): 
+        print('  '*tab,"STATEMENT", self.LT(1), self.LA(1))
         time.sleep(0.5)
-        if self.LT(1)._text == 'if': self.IFSTAT()
-        elif self.LT(1)._text == 'while': self.WHILESTAT()
-        elif self.LT(1)._text == 'print': self.PRINTSTAT()
-        elif self.LA(1) == self.input.NAME: self.ASSIGNSTAT()
-        elif self.LA(1) == self.input.LCURBRACK: self.BLOCKSTAT()
+        if self.LT(1)._text == 'if': self.IFSTAT(tab+1)
+        elif self.LT(1)._text == 'while': self.WHILESTAT(tab+1)
+        elif self.LT(1)._text == 'print': self.PRINTSTAT(tab+1)
+        elif self.LA(1) == self.input.NAME: self.ASSIGNSTAT(tab+1)
+        elif self.LA(1) == self.input.LCURBRACK: self.BLOCKSTAT(tab+1)
         
-    def ASSIGNSTAT(self):
-        print("ASSIGNSTAT", self.LT(1))
+    def ASSIGNSTAT(self, tab=0):
+        print('  '*tab,"ASSIGNSTAT", self.LT(1))
         time.sleep(0.5)
-        self.ID()   ;print(self.LT(1))
+        self.ID(tab+1)   
         self.match(self.input.EQUALS) 
-        self.EXPR() 
+        self.EXPR(tab+1) 
         self.match(self.input.SEMICOLON)
 
-    def PRINTSTAT(self): 
-        print("PRINTSTAT", self.LT(1))
+    def PRINTSTAT(self, tab=0): 
+        print('  '*tab,"PRINTSTAT", self.LT(1))
         time.sleep(0.5)
-        self.match(self.input.NAME)     ;print(self.LT(1))
-        self.match(self.input.LPAREN)   ;print(self.LT(1))
+        self.match(self.input.NAME)     
+        self.match(self.input.LPAREN)  
 
         if self.LA(1) == self.input.NAME:
-            print("found ID")
-            self.ID()
+            self.ID(tab+1)
 
         elif self.LA(1) == self.input.DQUOTE or \
              self.LA(1) == self.input.NUMBER:
-            print("Found expr")
-            self.EXPR()
+            self.EXPR(tab+1)
         
         self.match(self.input.RPAREN)       
         self.match(self.input.SEMICOLON)    
         
-    def BLOCKSTAT(self): 
-        print("BLOCKSTAT", self.LT(1))
+    def BLOCKSTAT(self, tab=0): 
+        print('  '*tab,"BLOCKSTAT", self.LT(1))
         time.sleep(0.5)
-        self.match(self.input.LCURBRACK); self.STATEMENT(); self.match(self.input.RCURBRACK)
+        self.match(self.input.LCURBRACK)
+        while self.LA(1) != self.input.RCURBRACK:
+           self.STATEMENT(tab+1)
+        self.match(self.input.RCURBRACK)
 
-    def IFSTAT(self): 
-        print("IFTSTAT", self.LT(1))
+    def IFSTAT(self, tab=0): 
+        print('  '*tab,"IFTSTAT", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.NAME)
         self.match(self.input.LPAREN)
-        self.TEST()
+        self.TEST(tab+1)
         self.match(self.input.RPAREN)
-        self.STATEMENT()
+        self.STATEMENT(tab+1)
 
-    def WHILESTAT(self): 
+    def WHILESTAT(self, tab=0): 
         self.match(self.input.NAME)
         self.match(self.input.LPAREN)
-        self.TEST()
+        self.TEST(tab+1)
         self.match(self.input.RPAREN)
-        self.STATEMENT()
+        self.STATEMENT(tab+1)
 
-    def ID(self): 
-        print("ID", self.LT(1))
+    def ID(self, tab=0): 
+        print('  '*tab,"ID", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.NAME)
         
-    def EXPR(self): 
-        print("EXPR",self.LT(1))
-        if self.LA(1) == self.input.DQUOTE: self.STRING()
-        elif self.LA(1) == self.input.NUMBER: self.NUMBER()
-        print(self.LT(1))
+    def EXPR(self, tab=0): 
+        print('  '*tab,"EXPR",self.LT(1))
+        if self.LA(1) == self.input.DQUOTE: self.STRING(tab+1)
+        elif self.LA(1) == self.input.NUMBER: self.NUMBER(tab+1)
+        print('  '*tab,self.LT(1))
         
-    def TEST(self): 
-        print("TEST", self.LT(1))
+    def TEST(self, tab=0): 
+        print('  '*tab,"TEST", self.LT(1))
         time.sleep(0.5)
-        if self.LA(1) == self.input.NAME: self.ID()
-        else: self.EXPR()
+        if self.LA(1) == self.input.NAME: self.ID(tab+1)
+        else: self.EXPR(tab+1)
 
-        self.CMP_OP()
+        self.CMP_OP(tab+1)
 
-        if self.LA(1) == self.input.NAME: self.ID()
-        else: self.EXPR()
+        if self.LA(1) == self.input.NAME: self.ID(tab+1)
+        else: self.EXPR(tab+1)
 
-    def STRING(self):   
-        print("STRING", self.LT(1))
+    def STRING(self, tab=0):   
+        print('  '*tab,"STRING", self.LT(1))
         time.sleep(0.5)    
         self.match(self.input.DQUOTE)
         # Because I have a token for A-Z and one for 0..9 I have to match both NAME and NUMBERS to parse strings.
         while self.LA(1) in [self.input.NAME, self.input.NUMBER]: 
+            print('  '*tab,self.LT(1))
             if self.LA(1) == self.input.NAME: self.match(self.input.NAME)
-            if self.LA(1) == self.input.NUMBER: self.match(self.input.NUMBER)
+            elif self.LA(1) == self.input.NUMBER: self.match(self.input.NUMBER)
         self.match(self.input.DQUOTE)
 
-    def NUMBER(self): 
+    def NUMBER(self, tab=0): 
+        print('  '*tab,"NUMBER", self.LT(1))
         self.match(self.input.NUMBER)  
 
-    def CMP_OP(self): 
+    def CMP_OP(self, tab=0): 
+        print('  '*tab,"CMP_OP", self.LT(1), self.LT(2))
         # ==
         if self.LA(1) == self.input.EQUALS and self.LA(2) == self.input.EQUALS:
             self.match(self.input.EQUALS); self.match(self.input.EQUALS)
@@ -155,6 +160,7 @@ if __name__ == "__main__":
 print("Helloworld");
 if(x==0){
     print("xis0");
+    x=1;
 }
 """
     drewparser = Parser(input, 2)
