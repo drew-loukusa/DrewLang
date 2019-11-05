@@ -1,4 +1,7 @@
-Uhhhh.
+PURPOSE:
+    This document describes the features I'd like my language to have.
+    To start off with, I won't have most of what's described here supported, but I aim to use this document 
+    as a goal; I'd like to implement everything below at some point in the future.
 
 I'm just going to whole cloth copy Python but ditch the whitespace thing because I don't want to deal 
 with making a parser that can support that.

@@ -1,0 +1,66 @@
+Document Purpose:
+    To define a very limited grammar so I can get started building language structures. 
+    
+Short Description of what I want in my language:
+To start of with:
+
+For data structures: I want simple variables, lists or arrays can come later.
+For variables: I want variable assignments, and for NOW we'll do python style assignments.
+                which have no type decleration before the variable name.
+
+                Assignment will be 'ID' '=' ('NUMBER' | 'STRING')
+
+I want a print function and I want 'if', 'else' 'while'.
+In order for that I need TESTS like 'x == 0' and etc.
+
+I want nested control structures as well.
+
+Okay so let's try to rigoursly define the above with a grammar of sorts:
+
+Program         : STATEMENT * ;
+STATEMENT       : ASSIGNSTAT  ;
+                | PRINTSTAT   ;    //Will change to more general thing later like: func_call or something
+                | BLOCKSTAT;
+                | IFSTAT      ;
+                | WHILESTAT   ;
+
+ASSIGNSTAT      : ID '=' EXPR ';'                       ;
+PRINTSTAT       : 'print' '(' (ID | EXPR) ')' ';'       ;
+IFSTAT          : 'if' '(' TEST ')' STATEMENT           ;
+WHILESTAT       : 'while' '(' TEST ')' STATEMENT        ;
+BLOCKSTAT       : '{'  STATEMENT *  '}'                 ;
+
+ID              : ('a'..'z' | 'A'..'Z')+;               ;
+EXPR            : (NUMBER | STRING )                    ;
+TEST            : (ID | EXPR) CMP_OP (ID | EXPR)        ;
+
+STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9')+ '"'  ;
+NUMBER          : ('0'..'9') +                              ;
+
+CMP_OP          : '==' | '>=' | '<=' | '>' | '<'        ;
+
+Let's modify the above to work with a LL(1) Recursive Decent Parser:
+
+Program         : STATEMENT   ;
+STATEMENT       : ASSIGNSTAT  STATEMENT
+                | PRINTSTAT   STATEMENT        //Will change to more general thing later like: func_call or something
+                | BLOCKSTAT   STATEMENT
+                | IFSTAT      STATEMENT
+                | WHILESTAT   STATEMENT
+                |
+                ;
+
+ASSIGNSTAT      : ID '=' EXPR ';'                       ;
+PRINTSTAT       : 'print' '(' (ID | EXPR) ')' ';'       ;
+IFSTAT          : 'if' '(' TEST ')' STATEMENT           ;
+WHILESTAT       : 'while' '(' TEST ')' STATEMENT        ;
+BLOCKSTAT       : '{'  STATEMENT  '}'                   ;
+
+ID              : ('a'..'z' | 'A'..'Z')+                ;
+EXPR            : (NUMBER | STRING )                    ;
+TEST            : (ID | EXPR) CMP_OP (ID | EXPR)        ;
+
+STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"' ;
+NUMBER          : ('0'..'9') +                              ;
+
+CMP_OP          : '==' | '>=' | '<=' | '>' | '<'        ;

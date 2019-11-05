@@ -1,0 +1,23 @@
+Program         : STATEMENT   ;
+STATEMENT       : ASSIGNSTAT  STATEMENT
+                | PRINTSTAT   STATEMENT        
+                | BLOCKSTAT   STATEMENT
+                | IFSTAT      STATEMENT
+                | WHILESTAT   STATEMENT
+                |
+                ;
+
+ASSIGNSTAT      : ID '=' EXPR ';'                       ;
+PRINTSTAT       : 'print' '(' (ID | EXPR) ')' ';'       ;
+IFSTAT          : 'if' '(' TEST ')' STATEMENT           ;
+WHILESTAT       : 'while' '(' TEST ')' STATEMENT        ;
+BLOCKSTAT       : '{'  STATEMENT  '}'                   ;
+
+ID              : ('a'..'z' | 'A'..'Z')+                ;
+EXPR            : (NUMBER | STRING )                    ;
+TEST            : (ID | EXPR) CMP_OP (ID | EXPR)        ;
+
+STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"' ;
+NUMBER          : ('0'..'9') +                              ;
+
+CMP_OP          : '==' | '>=' | '<=' | '>' | '<'        ;
