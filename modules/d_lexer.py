@@ -9,10 +9,10 @@ from lexer import Lexer
 
 class DLexer(Lexer):
     # NOTE: The below line is just so I have member names to reference since I dynamically create my lexer at runtime.
-    give_nums = lambda: list(range(1,24))
+    give_nums = lambda: list(range(1,27))
     NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
     LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQUOTE, STAR, \
-    PLUS, DASH, FSLASH, BSLASH = give_nums()
+    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT = give_nums()
     def __init__(self, input):
 
         # Token defitions file location:
@@ -34,7 +34,13 @@ if(x==0){
     x=1;
 }
 """
-    lox = DLexer(input) 
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print("DLexer Class after initialization:")
-    for k,v in lox.__dict__.items(): print(f"{k}\t: {v}")
+    lexer = DLexer(input) 
+    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    #print("DLexer Class after initialization:")
+    #for k,v in lox.__dict__.items(): print(f"{k}\t: {v}")
+
+    t = lexer.nextToken()
+    while t._type != lexer.EOF_TYPE:
+        print(t)
+        t = lexer.nextToken()
+    print(t)

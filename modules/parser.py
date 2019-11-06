@@ -41,9 +41,9 @@ class Parser:
     def statement(self, tab=0): 
         print('  '*tab,"STATEMENT", self.LT(1), self.LA(1))
         time.sleep(0.5)
-        if self.LT(1)._text == 'if': self.ifstat(tab+1)
-        elif self.LT(1)._text == 'while': self.whilestat(tab+1)
-        elif self.LT(1)._text == 'print': self.printstat(tab+1)
+        if   self.LA(1) == self.input.IF: self.ifstat(tab+1)
+        elif self.LA(1) == self.input.WHILE: self.whilestat(tab+1)
+        elif self.LA(1) == self.input.PRINT: self.printstat(tab+1)
         elif self.LA(1) == self.input.NAME: self.assignstat(tab+1)
         elif self.LA(1) == self.input.LCURBRACK: self.blockstat(tab+1)
         
@@ -58,7 +58,7 @@ class Parser:
     def printstat(self, tab=0): 
         print('  '*tab,"PRINTSTAT", self.LT(1))
         time.sleep(0.5)
-        self.match(self.input.NAME)     
+        self.match(self.input.PRINT)     
         self.match(self.input.LPAREN)  
 
         if self.LA(1) == self.input.NAME:
@@ -82,14 +82,14 @@ class Parser:
     def ifstat(self, tab=0): 
         print('  '*tab,"IFTSTAT", self.LT(1))
         time.sleep(0.5)
-        self.match(self.input.NAME)
+        self.match(self.input.IF)
         self.match(self.input.LPAREN)
         self.test(tab+1)
         self.match(self.input.RPAREN)
         self.statement(tab+1)
 
     def whilestat(self, tab=0): 
-        self.match(self.input.NAME)
+        self.match(self.input.WHILE)
         self.match(self.input.LPAREN)
         self.test(tab+1)
         self.match(self.input.RPAREN)
@@ -113,7 +113,7 @@ class Parser:
         else: self.expr(tab+1)
     
     def NAME(self, tab=0): 
-        print('  '*tab,"ID", self.LT(1))
+        print('  '*tab,"NAME", self.LT(1))
         time.sleep(0.5)
         self.match(self.input.NAME)
 
@@ -160,6 +160,7 @@ if __name__ == "__main__":
 print("Helloworld");
 if(x==0){
     print("xis0");
+    print(x);
     x=1;
 }
 """

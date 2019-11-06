@@ -20,3 +20,6 @@ PLUS         +
 DASH         -
 FSLASH       /
 BSLASH       \
+IF           if 
+WHILE        while
+PRINT        print

@@ -1,22 +1,23 @@
-Program         : statement *;
-statement       : assignstat  
-                | printstat           
+program         : statement * end=EOF_TYPE ;
+statement       : ( printstat           
                 | blockstat   
                 | ifstat      
                 | whilestat   
+                | assignstat )
                 ;
 
 assignstat      : NAME '=' expr ';'                         ;
-printstat       : 'print' '(' (NAME | expr) ')' ';'         ;
+printstat       : 'print' '(' ( NAME | expr ) ')' ';'         ;
 ifstat          : 'if' '(' test ')' statement               ;
 whilestat       : 'while' '(' test ')' statement            ;
-blockstat       : '{'  statement *  '}'                     ;
+blockstat       : '{' statement * end=RCURBRACK '}'        ;
 
 
-expr            : (NUMBER | STRING )                            ;
-test            : (NAME | expr) CMP_OP (NAME | expr)            ;
+expr            : ( NUMBER | STRING )                            ;
+test            : ( NAME | expr ) CMP_OP ( NAME | expr )            ;
 
-NAME            : ('a'..'z' | 'A'..'Z')+                        ;
-STRING          : '"'('a'..'z' | 'A'..'Z' | '0'..'9') + '"'     ;
-NUMBER          : ('0'..'9') +                                  ;
-CMP_OP          : '==' | '>=' | '<=' | '>' | '<'                ;
+NAME            : ( 'a'..'z' | 'A'..'Z' ) +                      ;
+STRING          : '"' ( NAME | NUMBER ) * end=NAME,NUMBER '"'     ;
+NUMBER          : ('0'..'9') +                                   ;
+CMP_OP          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
+

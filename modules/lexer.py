@@ -111,6 +111,14 @@ class Lexer:
         while char_selector(self.c):
             multichar += self.c
             self.consume()
+        
+        # NOTE:
+        # TEMPORARY CODE: I will move this elsewhere later. 
+        # I will, abstract this out, but I just need this to make my life slighty easier at the moment
+        if multichar == 'print': token_type = self.getTokenType('print')
+        if multichar == 'while': token_type = self.getTokenType('while')
+        if multichar == 'if':    token_type = self.getTokenType('if')
+        # -------------------------------------------------------------
         return Token(token_type, multichar, self.getTokenName(token_type))
 
     def _WS(self):
