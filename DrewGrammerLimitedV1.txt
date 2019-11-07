@@ -1,4 +1,4 @@
-program         : statement * end=EOF_TYPE ;
+program         : statement * end!=EOF_TYPE ;
 statement       : ( printstat           
                 | blockstat   
                 | ifstat      
@@ -10,14 +10,43 @@ assignstat      : NAME '=' expr ';'                         ;
 printstat       : 'print' '(' ( NAME | expr ) ')' ';'         ;
 ifstat          : 'if' '(' test ')' statement               ;
 whilestat       : 'while' '(' test ')' statement            ;
-blockstat       : '{' statement * end=RCURBRACK '}'        ;
+blockstat       : '{' statement * end!=RCURBRACK '}'        ;
 
 
 expr            : ( NUMBER | STRING )                            ;
 test            : ( NAME | expr ) CMP_OP ( NAME | expr )            ;
 
-NAME            : ( 'a'..'z' | 'A'..'Z' ) +                      ;
-STRING          : '"' ( NAME | NUMBER ) * end=NAME,NUMBER '"'     ;
-NUMBER          : ('0'..'9') +                                   ;
-CMP_OP          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
+NAME            : NAME                       ;
+STRING          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
+NUMBER          : NUMBER                                    ;
+CMP_OP          : ( EQUALS | GE | LE | '>' | '<' ) ;
+EQUALS          : '=' '='       ;
+GE              : '>' '='       ;
+LE              : '<' '='       ;
 
+PREDICATES: Map rule_name to the token_name that predicts said rule
+
+printstat -> PRINT              
+blockstat -> LCURBRACK
+ifstat -> IF
+whilestat -> WHILE
+STRING -> DQUOTE
+NAME -> NAME
+NUMBER -> NUMBER
+EQUALS -> EQUALS
+GE -> GE
+LE -> LE
+'<' -> LT
+'>' -> GT
+expr -> NUMBER|STRING
+assignstat -> NAME
+END
+
+# TERMINAL_DEFS: 
+# I should put these IN the grammar, but for now, I'm putting them 
+# here. I'll fix this at some point, but for now with the way my 
+# parser generator works, this makes my life a little easier.
+
+NUMBER          : ('0'..'9') ;
+NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;
+CMP_OP          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
