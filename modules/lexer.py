@@ -142,14 +142,18 @@ class Lexer:
             # > If a recognizer returns true, parse and return the token:
             for name,recognizer in self.multi_char_recognizers:
                 if recognizer(self.c): 
-                    return self.parseMultiChar(recognizer, getattr(self, name))        
+                    tkn = self.parseMultiChar(recognizer, getattr(self, name))        
+                    #print(tkn)
+                    return tkn
 
             # Handle single character tokens:
             # ----------------------------------------
             for c,ttype in self.char_to_ttype.items():
                 if self.c == c and ttype != "multi": 
                     self.consume()
-                    return Token(ttype, c, self.getTokenName(ttype))
+                    tkn = Token(ttype, c, self.getTokenName(ttype))
+                    #print(tkn)
+                    return tkn
 
             # If self.c matched no valid character then: 
             raise Exception(f"Invalid character: {self.c}")

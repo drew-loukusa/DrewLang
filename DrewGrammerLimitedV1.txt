@@ -19,8 +19,8 @@ test            : ( NAME | expr ) CMP_OP ( NAME | expr )            ;
 NAME            : NAME                       ;
 STRING          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
 NUMBER          : NUMBER                                    ;
-CMP_OP          : ( EQUALS | GE | LE | '>' | '<' ) ;
-EQUALS          : '=' '='       ;
+CMP_OP          : ( DEQUALS | GE | LE | '>' | '<' ) ;
+DEQUALS          : '=' '='       ;
 GE              : '>' '='       ;
 LE              : '<' '='       ;
 
@@ -33,12 +33,12 @@ whilestat -> WHILE
 STRING -> DQUOTE
 NAME -> NAME
 NUMBER -> NUMBER
-EQUALS -> EQUALS
-GE -> GE
-LE -> LE
+DEQUALS -> EQUALS
+GE -> GT&EQUALS
+LE -> LT&EQUALS
 '<' -> LT
 '>' -> GT
-expr -> NUMBER|STRING
+expr -> NUMBER|DQUOTE
 assignstat -> NAME
 END
 
