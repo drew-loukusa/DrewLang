@@ -16,9 +16,9 @@ blockstat       : '{' statement * end!=RCURBRACK '}'        ;
 expr            : ( NUMBER | STRING )                            ;
 test            : ( NAME | expr ) CMP_OP ( NAME | expr )            ;
 
-NAME            : NAME                       ;
 STRING          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
-NUMBER          : NUMBER                                    ;
+NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;                      
+NUMBER          : ('0'..'9') +                                    ;
 CMP_OP          : ( DEQUALS | GE | LE | '>' | '<' ) ;
 DEQUALS          : '=' '='       ;
 GE              : '>' '='       ;
@@ -50,3 +50,6 @@ END
 NUMBER          : ('0'..'9') ;
 NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;
 CMP_OP          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
+
+Sike, I'm putting these back in, or else my tree based impl 
+recurses forever. :)

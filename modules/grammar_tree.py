@@ -23,12 +23,15 @@ class RuleToken:
         return f'<{self.type_names[self.type]}; "{self.text}">'
 
 class RuleNode:
-    def __init__(self, rule_name, definition=None):
+    def __init__(self, rule_name):
         self.rule_name = rule_name 
-        self.definition = definition # A list of RuleNodes which makeup this rule
+        self.definition = [] # A list of RuleNodes which makeup this rule
 
-    def __str__(self):
-        return f"< {self.rule_name}; {self.definition} >"
+    def __str__(self):        
+        def_list = ""
+        for item in self.definition:
+            if item: def_list += f"{item.rule_name}, "
+        return f"{self.rule_name}; [{def_list}]"
 
 class RuleTree:
     # 1. Create the root node:
@@ -41,36 +44,54 @@ class RuleTree:
     def __init__(self, rule_tokens=None):
         self.root = None
         self.rules_dict = {}
+        self.rule_order = {}
+        self.rule_order_counter = 0
 
         if rule_tokens: self.build_tree(rule_tokens)
+    
+    def _dump(self, node: RuleNode, tab=0, depth=0): 
+        #if depth == 10: return
+        if node: print("  "*tab,node)
+        if not node or len(node.definition) == 0: return
+        for child in node.definition:
+            self._dump(child, tab+1, depth+1)
 
     def get_or_create(self, rule_name) -> RuleNode:
-        if rule_name in self.rules_dict: 
+        if False and rule_name in self.rules_dict: 
             return self.rules_dict[rule_name]
         else:
             node = RuleNode(rule_name)
             self.rules_dict[rule_name] = node  # Assign rule_name -> rule_node
+            self.rule_order[rule_name] = self.rule_order_counter
+            self.rule_order_counter += 1
             return node
 
     def build_tree(self, rule_tokens):
         """ rule_tokens is a list of rule_token lists """
         for rule_list in rule_tokens:
-
+            #print("------------------------------------")
+            #print("From build_tree():")
             # Setup or retreive root node for each rule:
             rule_name,rule = rule_list[0].text, None
+            #print(f"rule_name: {rule_name}")
             if rule_name in self.rules_dict: 
                 rule = self.rules_dict[rule_name]
+                #print(f"Retrieved {rule_name} from the dict")
             else:
-                self.root = RuleNode(rule_name)
+                rule = RuleNode(rule_name)    
+                self.rules_dict[rule_name] = rule
+                self.root = rule
+                #print(f"Set {rule_name} to tree root.")
+
 
             definition_list = rule_list[1:] # Remove rule_name token from list
-            print("From build_tree():")
-            print(f"root: {self.root}")
+            #print(f"sub-root: {rule}")
             self.build_definition(rule, definition_list)
 
     def build_definition(self, rule, rule_list):
-        print("Top of build_def():")
-        print(f"Current rule: {rule}")
+        #print(".........................")
+        #print("Top of build_def():")
+        #print(f"Current rule: {rule}")
         last = None
         last_was_or_node = False
         for rule_token in rule_list:
@@ -78,6 +99,15 @@ class RuleTree:
 
             if rule_token.type == RuleToken.NON_TERMINAL: 
                 child = self.get_or_create(rule_token.text)
+
+                # This is to avoid referencing higher order rules which could cause
+                # cycles in the "tree" (it's kinda a graph?). 
+
+                # There may be a better solution than this, but this works for now...
+                # I hope. 
+                if rule.rule_name not in ["program","SUB_RULE"] and \
+                    self.rule_order[child.rule_name] < self.rule_order[rule.rule_name]:
+                    child = RuleNode(child.rule_name)
 
             elif rule_token.type == RuleToken.TERMINAL: 
                 child = RuleNode(rule_token.text)
@@ -95,6 +125,9 @@ class RuleTree:
                     child = RuleNode(rule_token.text)
                     child.definition.append(last)
 
+                if rule_token.text == '+': 
+                    continue # Will implement later
+
             elif rule_token.type == RuleToken.MODIFIER_INFO: 
                 # The last node should be a '*' node. So put this info in the def for it
                 child = rule.definition.pop()
@@ -102,19 +135,19 @@ class RuleTree:
                 child.definition.append(node)
 
             elif rule_token.type == RuleToken.SUB_RULE:
-                child = RuleNode("SUB_RULE")
+                child = RuleNode("SUB_RULE")                
                 self.build_definition(child, rule_token.sub_list)
 
             # If the last node was an 'or node', then we need 
             # to put the current node as the 'or' node's right child:
-            if last_was_or_node:                 
+            if last_was_or_node and len(rule.definition) > 0:                 
                 last = rule.definition.pop()
                 last.definition.append(child)
                 last_was_or_node = False
                 child = last
 
             # Add child to the rules definition (list):
-            print(f"Adding {child} to rule def...")
+            #print(f"Adding {child} to rule def...")
             rule.definition.append(child)            
 
 def process_rule(tokens):
@@ -195,6 +228,8 @@ if __name__ == "__main__":
             rule_name, predictor = tokens[0], tokens[2]
             predicates[rule_name] = predictor
             line = f.readline() 
-    
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     tree = RuleTree(rule_tokens)
-    
+    tree._dump(tree.root)
+    for rule, defn in tree.rules_dict.items():
+        print(defn)
