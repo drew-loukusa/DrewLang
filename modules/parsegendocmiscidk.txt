@@ -1,0 +1,27 @@
+
+rule: rule_name ':' (not_terminal* terminal *) * '*' *
+
+
+For a given rule:
+
+    For a given rule token:
+
+        *   If the rule token is a rule name then print a function definition.
+
+        *   If the rule token is a NON-Terminal symbol with no modifier, 
+            then print that non-terminals function call 
+
+        *   If the rule token is a Terminal symbol with no modifier,
+            then print a match call for the symbol
+
+        *   If the rule token is a non-terminal symbol WITH a modifier, (0 or more)
+            print a while statement with the included end condition,
+            then print a body function call to the non-terminals function
+
+        *   If the rule token is a non-terminal or a terminal in an sub-rule 
+            (only for orring right now), then print a series of if, elifs 
+            where the condition is "self.LA(1) == self.input.<lexer_token_name>" 
+            and then a body function call or match call 
+
+
+        

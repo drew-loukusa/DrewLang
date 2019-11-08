@@ -46,6 +46,7 @@ class RuleTree:
         self.rules_dict = {}
         self.rule_order = {}
         self.rule_order_counter = 0
+        self.generated = {}
 
         if rule_tokens: self.build_tree(rule_tokens)
     
@@ -149,6 +150,27 @@ class RuleTree:
             # Add child to the rules definition (list):
             #print(f"Adding {child} to rule def...")
             rule.definition.append(child)            
+
+    def generate_source_text(self, root): 
+        # Recursively iterate through all nodes in tree, generating source code 
+        # Put rule names into self.generated (dict) as they are generated.
+        print(f"\tdef {root.rule_name}(self):")
+        for child in root.definition:
+
+            # For '*', '|' and "SUB_RULE", you'll need to step down
+            # to the next node. For '|', more than once most likely.
+
+            # NOTE: Also try to figure out how to generate recognizers 
+            # for NUMBER, NAME and maybe 'string' from the grammar.
+
+            # And give more thought to how to integrate the token_defs
+            # and the grammar together.
+
+            if child.rule_name == '*': pass       
+            elif child.rule_name == '|': pass
+            elif child.rule_name == "SUB_RULE": pass
+            elif child.rule_name.isupper(): pass # Terminal 
+            elif child.rule_name.islower(): pass # Non-Terminal
 
 def process_rule(tokens):
     # From line tokens, make a list of rule-tokens

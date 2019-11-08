@@ -13,13 +13,13 @@ whilestat       : 'while' '(' test ')' statement            ;
 blockstat       : '{' statement * end!=RCURBRACK '}'        ;
 
 
-expr            : ( NUMBER | STRING )                            ;
-test            : ( NAME | expr ) CMP_OP ( NAME | expr )            ;
+expr            : ( NUMBER | string )                            ;
+test            : ( NAME | expr ) cmp_op ( NAME | expr )            ;
 
-STRING          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
+string          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
 NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;                      
 NUMBER          : ('0'..'9') +                                    ;
-CMP_OP          : ( DEQUALS | GE | LE | '>' | '<' ) ;
+cmp_op          : ( DEQUALS | GE | LE | '>' | '<' ) ;
 DEQUALS          : '=' '='       ;
 GE              : '>' '='       ;
 LE              : '<' '='       ;
@@ -30,7 +30,7 @@ printstat -> PRINT
 blockstat -> LCURBRACK
 ifstat -> IF
 whilestat -> WHILE
-STRING -> DQUOTE
+string -> DQUOTE
 NAME -> NAME
 NUMBER -> NUMBER
 DEQUALS -> EQUALS
@@ -49,7 +49,7 @@ END
 
 NUMBER          : ('0'..'9') ;
 NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;
-CMP_OP          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
+cmp_op          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
 
 Sike, I'm putting these back in, or else my tree based impl 
 recurses forever. :)
