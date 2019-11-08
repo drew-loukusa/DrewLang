@@ -1,3 +1,25 @@
+""" 
+This module contains a messy parser generator.
+
+It reads in my grammar from DrewGrammarLimitedV1.txt and
+creates a parser file which can parse my language. 
+
+Currently my parser is WEAK since it doesn't do anything but parse.
+
+Anyways.
+
+NOTE: I will at somepoint redesign this whole fuckin thing.
+
+I think the grammar of my grammar (wow how meta) could be represented 
+in as a tree. I think it would make for a more understandable 
+interface if I made something that read in the grammar to a tree data
+structure and then we generated source code by walking said tree.
+
+HMMMMMMMMMMMMMM.
+
+"""
+
+
 import os
 
 header = """
@@ -30,6 +52,12 @@ class Parser:
 
 """
 class RuleToken:
+    RULE_NAME = 0
+    NON_TERMINAL = 1
+    TERMINAL = 2
+    MODIFIER = 3
+    MODIFIER_INFO = 4
+    SUB_RULE = 5
     def __init__(self, name, token):
         self.type = name
         self.text = token 
@@ -51,19 +79,19 @@ def process_rule(tokens):
     rule_tokens = []
 
     # Process rule name and ':':
-    rule_tokens.append(RuleToken("rule_name", tokens[0])) ; tokens.pop(0); tokens.pop(0)
+    rule_tokens.append(RuleToken(RuleToken.RULE_NAME, tokens[0])) ; tokens.pop(0); tokens.pop(0)
 
     def rules(token):
         # Process terminal token:
-        if token[0] == "'":    return RuleToken("terminal",token)
+        if token[0] == "'":    return RuleToken(RuleToken.TERMINAL,token)
         
         # Process modifier token:
-        elif token in '*+?|':  return RuleToken("modifier",token)
+        elif token in '*+?|':  return RuleToken(RuleToken.MODIFIER,token)
 
         # Process modifer info token;
         elif len(token) >= 3 and token[0:3] == 'end':
-                                return RuleToken("modifier_info", token)
-        else:                   return RuleToken("non_terminal", token)
+                                return RuleToken(RuleToken.MODIFIER_INFO, token)
+        else:                   return RuleToken(RuleToken.NON_TERMINAL, token)
     i = 0
     while i < len(tokens):
         token = tokens[i]
@@ -73,7 +101,7 @@ def process_rule(tokens):
         if token == '(': 
             i += 1; token = tokens[i]
 
-            sub_rule = RuleToken("sub_rule", None)
+            sub_rule = RuleToken(RuleToken.SUB_RULE, None)
             while token != ')':
                 sub_rule.sub_list.append(rules(token))
                 i += 1; token = tokens[i]
@@ -96,7 +124,7 @@ def gen_code(rule_tokens, predicates):
     #while_str    = "\t\twhile self.LA(1) {comp} self.input.{loop_condition}:"
     def gen_line(token, peek1, peek2,n=0):
         
-        if peek1 and peek1.type == "modifier" and peek1.text == "*":
+        if peek1 and peek1.type == RuleToken.MODIFIER and peek1.text == "*":
             loop_condition,comp = peek2.text[5:].split(','), peek2.text[3:5]
             foo = f"while self.LA(1) {comp} self.input.{loop_condition[0]}:"
 
@@ -107,16 +135,16 @@ def gen_code(rule_tokens, predicates):
             code_lines.append(tab*n+foo)
             n += 1
             
-        if token.type == "non_terminal": 
+        if token.type == RuleToken.NON_TERMINAL: 
             if token.text in ["NAME", "NUMBER"]:
                 code_lines.append(tab*n+f"self.match(self.input.{token.text})")    
             else:
                 code_lines.append(tab*n+f"self.{token.text}()")
 
-        if token.type == "terminal": 
+        if token.type == RuleToken.TERMINAL: 
             code_lines.append(tab*n+f"self.match(self.input.getTokenType({token.text}))")
         
-        if token.type == "sub_rule": 
+        if token.type == RuleToken.SUB_RULE: 
             
             def build_stat(token, predicates, if_or_elif):
                 predictor,keyword, op = [], None, None
@@ -174,7 +202,7 @@ def gen_code(rule_tokens, predicates):
         peek1 = None if i+2>=k else rule_tokens[i+1] 
         peek2 = None if i+2>=k else rule_tokens[i+2] 
 
-        if token.type == "rule_name":
+        if token.type == RuleToken.RULE_NAME:
             n = 1
             code_lines.append(tab*n+rule_def_str.format(token.text))
             n = 2
@@ -222,6 +250,9 @@ with open(path+"DrewGrammerLimitedV1.txt") as f:
 
 for k,v in predicates.items(): print(f"{k}: {v}")
 source_code_lines = []
+
+# NOTE: You can use the rule_tokens generated to build a tree structure 
+
 for sub_list in rule_tokens: 
     source_code_lines += gen_code(sub_list,predicates)
     
