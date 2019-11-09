@@ -1,3 +1,11 @@
+""" 
+    This module contains code for generating a parser from a grammar, 
+    (aka a parser generator).
+
+
+"""
+
+
 class RuleToken:
     RULE_NAME = 0
     NON_TERMINAL = 1
@@ -22,74 +30,56 @@ class RuleToken:
             return rep
         return f'<{self.type_names[self.type]}; "{self.text}">'
 
-class RuleNode:
-    def __init__(self, rule_name):
-        self.rule_name = rule_name 
-        self.definition = [] # A list of RuleNodes which makeup this rule
+class Node:
+    def __init__(self, name, ntype):
+        self.name = name 
+        self.type = ntype
+        self.nodes = [] # A list of nodes
 
     def __str__(self):        
         def_list = ""
-        for item in self.definition:
-            if item: def_list += f"{item.rule_name}, "
-        return f"{self.rule_name}; [{def_list}]"
+        for item in self.nodes:
+            if item: def_list += f"{item.name}, "
+        return f"{self.name}; [{def_list}]"
 
-class RuleTree:
-    # 1. Create the root node:
-    #    a. Create blank nodes for it's Non-terminal definition tokens
-    #    b. Create leaf nodes for it's terminal definition tokens
-    #    c. Put each non-terminal token into a dict with def_token_name as key
+class Grammar:
+    """
+    Description of how this class works: I changed it completely lmao. Have to rewrite this.
+    """ 
 
-    # 2. For each subsequent rule, retreive node from dict using rule_name as key
-    #       and repeat step 1 a-b 
     def __init__(self, rule_tokens=None):
-        self.root = None
-        self.rules_dict = {}
-        self.rule_order = {}
-        self.rule_order_counter = 0
-        self.generated = {}
+        self.rules = []    
 
-        if rule_tokens: self.build_tree(rule_tokens)
-    
-    def _dump(self, node: RuleNode, tab=0, depth=0): 
-        #if depth == 10: return
-        if node: print("  "*tab,node)
-        if not node or len(node.definition) == 0: return
-        for child in node.definition:
-            self._dump(child, tab+1, depth+1)
+        if rule_tokens: self._build_rules(rule_tokens)
 
-    def get_or_create(self, rule_name) -> RuleNode:
-        if False and rule_name in self.rules_dict: 
-            return self.rules_dict[rule_name]
-        else:
-            node = RuleNode(rule_name)
-            self.rules_dict[rule_name] = node  # Assign rule_name -> rule_node
-            self.rule_order[rule_name] = self.rule_order_counter
-            self.rule_order_counter += 1
-            return node
+    def dump(self):
+        for rule in self.rules:
+            n = 2 if len(rule.name) < 7 else 1
+            print(f"{rule.name}:"+'\t'*n+'[',end=' ')
+            for item in rule.nodes:
+                if item.name in ['*', '|', "SUB_RULE"]: 
+                    if item.name == "SUB_RULE": item = item.nodes[0]
+                    rep = f"'{item.name}' -> [ "
+                    for node in item.nodes:
+                        rep += f"{node.name}, "
+                    rep += ' ])'
+                    print(rep, end=', ')
+                else: print(f"{item.name}", end=', ')
+            print(' ]')
 
-    def build_tree(self, rule_tokens):
+    def _build_rules(self, rule_tokens):
         """ rule_tokens is a list of rule_token lists """
         for rule_list in rule_tokens:
-            #print("------------------------------------")
-            #print("From build_tree():")
-            # Setup or retreive root node for each rule:
-            rule_name,rule = rule_list[0].text, None
-            #print(f"rule_name: {rule_name}")
-            if rule_name in self.rules_dict: 
-                rule = self.rules_dict[rule_name]
-                #print(f"Retrieved {rule_name} from the dict")
-            else:
-                rule = RuleNode(rule_name)    
-                self.rules_dict[rule_name] = rule
-                self.root = rule
-                #print(f"Set {rule_name} to tree root.")
-
+        
+            rule_name,rule = rule_list[0].text, None  
+            rule = Node(rule_name, rule_list[0].type)    
+            self.rules.append(rule)
 
             definition_list = rule_list[1:] # Remove rule_name token from list
             #print(f"sub-root: {rule}")
-            self.build_definition(rule, definition_list)
+            self._build_definition(rule, definition_list)
 
-    def build_definition(self, rule, rule_list):
+    def _build_definition(self, rule, rule_list):
         #print(".........................")
         #print("Top of build_def():")
         #print(f"Current rule: {rule}")
@@ -98,79 +88,146 @@ class RuleTree:
         for rule_token in rule_list:
             child = None
 
-            if rule_token.type == RuleToken.NON_TERMINAL: 
-                child = self.get_or_create(rule_token.text)
-
-                # This is to avoid referencing higher order rules which could cause
-                # cycles in the "tree" (it's kinda a graph?). 
-
-                # There may be a better solution than this, but this works for now...
-                # I hope. 
-                if rule.rule_name not in ["program","SUB_RULE"] and \
-                    self.rule_order[child.rule_name] < self.rule_order[rule.rule_name]:
-                    child = RuleNode(child.rule_name)
-
+            if rule_token.type == RuleToken.NON_TERMINAL:                 
+                child = Node(rule_token.text, rule_token.type)
+                
             elif rule_token.type == RuleToken.TERMINAL: 
-                child = RuleNode(rule_token.text)
+                child = Node(rule_token.text, rule_token.type)
 
             elif rule_token.type == RuleToken.MODIFIER: 
                 #We need to grab the last node since it is being modified
                 if rule_token.text == "*":
-                    last = rule.definition.pop()
-                    child = RuleNode(rule_token.text)
-                    child.definition.append(last)
+                    last = rule.nodes.pop()
+                    child = Node(rule_token.text, rule_token.type)
+                    child.nodes.append(last)
 
                 if rule_token.text == '|': 
                     last_was_or_node = True
-                    last = rule.definition.pop()
-                    child = RuleNode(rule_token.text)
-                    child.definition.append(last)
+                    
+                    if rule.nodes[-1].name == '|': continue
+                    
+                    last = rule.nodes.pop()
+                    child = Node(rule_token.text, rule_token.type)
+                    child.nodes.append(last)
 
                 if rule_token.text == '+': 
                     continue # Will implement later
 
             elif rule_token.type == RuleToken.MODIFIER_INFO: 
                 # The last node should be a '*' node. So put this info in the def for it
-                child = rule.definition.pop()
-                node = RuleNode(rule_token.text)
-                child.definition.append(node)
+                child = rule.nodes.pop()
+                node = Node(rule_token.text, rule_token.type)
+                child.nodes.append(node)
 
             elif rule_token.type == RuleToken.SUB_RULE:
-                child = RuleNode("SUB_RULE")                
-                self.build_definition(child, rule_token.sub_list)
+                child = Node("SUB_RULE", rule_token.type)                
+                self._build_definition(child, rule_token.sub_list)
+                child = child.nodes[0] # Make child the 'or' node instead of SUB_RULE
 
             # If the last node was an 'or node', then we need 
             # to put the current node as the 'or' node's right child:
-            if last_was_or_node and len(rule.definition) > 0:                 
-                last = rule.definition.pop()
-                last.definition.append(child)
+            if last_was_or_node and len(rule.nodes) > 0:                 
+                last = rule.nodes.pop()
+                last.nodes.append(child)
                 last_was_or_node = False
                 child = last
 
-            # Add child to the rules definition (list):
+            # Add child to the rules nodes (list):
             #print(f"Adding {child} to rule def...")
-            rule.definition.append(child)            
+            rule.nodes.append(child)            
 
-    def generate_source_text(self, root): 
+    def generate_source_text(self, predicates): 
         # Recursively iterate through all nodes in tree, generating source code 
         # Put rule names into self.generated (dict) as they are generated.
-        print(f"\tdef {root.rule_name}(self):")
-        for child in root.definition:
+        RT = RuleToken
+        for rule in self.rules:
+            print()
+            tab = 1
+            def tab_print(text, tab=0): print('    '*tab+text)
 
-            # For '*', '|' and "SUB_RULE", you'll need to step down
-            # to the next node. For '|', more than once most likely.
+            # Yeet out the rule name:
+            tab_print(f"def {rule.name}(self):", tab); tab += 1
+
+            if rule.name in ["NAME", "NUMBER"]: # Temporary while I better integrate my grammar and token_defs
+                tab_print(f"self.match(self.input.{rule.name})", tab)  
+                continue
 
             # NOTE: Also try to figure out how to generate recognizers 
             # for NUMBER, NAME and maybe 'string' from the grammar.
 
             # And give more thought to how to integrate the token_defs
             # and the grammar together.
+            def generate_rule(child, tab=1):
+                if child.type == RT.TERMINAL: # Terminal
+                    tab_print(f"self.match({child.name})", tab)
 
-            if child.rule_name == '*': pass       
-            elif child.rule_name == '|': pass
-            elif child.rule_name == "SUB_RULE": pass
-            elif child.rule_name.isupper(): pass # Terminal 
-            elif child.rule_name.islower(): pass # Non-Terminal
+                elif child.type == RT.NON_TERMINAL: # Non-Terminal                                       
+                    tab_print(f"self.{child.name}()", tab)
+                
+                if child.name == '*': 
+                    condition       = child.nodes[-1].name[5:] # Extract the loop end condition
+                    condition = condition.split(',')
+
+                    comp            = child.nodes[-1].name[3:5] # Extract the comparison operator
+                    suite           = child.nodes[0] 
+
+                    foo = f"while self.LA(1) {comp} self.input.{condition[0]}"
+                    if len(condition) > 1: 
+                        for cond in condition[1:]:
+                            foo += f" or self.LA(1) {comp} self.input.{cond}"
+                    tab_print(foo+':', tab)
+
+                    generate_rule(suite, tab+1)
+
+                elif child.name == '|': 
+
+                    def build_stat(token, predicates, if_or_elif):
+                        predictor,keyword, op = [], None, None
+                        if if_or_elif == 'if':
+                            keyword = 'if'
+                            predictor = predicates[token.name]
+                        if if_or_elif == 'elif':
+                            keyword = 'elif'
+                            predictor = predicates[token.name]
+                        if '&' in predictor: 
+                            predictor = predictor.split('&')
+                            op = "and"
+                        elif '|' in predictor: 
+                            predictor = predictor.split('|')
+                            op = 'or'
+                        else: predictor = [predictor]
+
+                        #print(f"predictor: {predictor}")
+
+                        cur_line = f"{keyword} self.LA(1) == self.input.{predictor[0]}"
+                        predictor.pop(0)
+
+                        #print(f"predictor: {predictor}")
+
+                        if op == "or":
+                            for p in predictor:
+                                cur_line += f" {op} self.LA(1) == self.input.{p}"
+
+                        if op == "and":       
+                            i = 2             
+                            for p in predictor:
+                                cur_line += f" {op} self.LA({i}) == self.input.{p}"
+                                i += 1
+                        
+                        cur_line += ':'
+                        return cur_line
+
+                    tab_print(build_stat(child.nodes[0], predicates, 'if'), tab)
+                    generate_rule(child.nodes[0], tab+1)
+                    suite = child.nodes[1:]
+                    for node in suite:
+                        tab_print(build_stat(node, predicates, 'elif'), tab)
+                        generate_rule(node, tab+1)
+                
+                #else: generate_rule(child, tab)
+
+            for child in rule.nodes:
+                generate_rule(child, tab)
 
 def process_rule(tokens):
     # From line tokens, make a list of rule-tokens
@@ -211,6 +268,7 @@ def process_rule(tokens):
             rule_tokens.append(rules(token))
         i += 1
     
+    # NOTE: RULE_TOKEN DUMP: 
     # for token in rule_tokens: 
     #     print(token, ' ', end='')
     # print()
@@ -229,6 +287,7 @@ if __name__ == "__main__":
         # Read in main portion of grammar:
         line = f.readline().rstrip()
         while "PREDICATES" not in line:     
+            if line[0] == '#': continue
             tokens+=(line.split())
             if len(tokens) == 0: line = f.readline(); continue
             if tokens[-1] == ';': 
@@ -242,6 +301,7 @@ if __name__ == "__main__":
         # but for now I have them as their own section in the grammar file.
         line = f.readline()
         while "END" != line:
+            if line[0] == '#': continue
             tokens = line.split()
             
             if len(tokens) == 0: line = f.readline() ; continue
@@ -251,7 +311,7 @@ if __name__ == "__main__":
             predicates[rule_name] = predictor
             line = f.readline() 
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    tree = RuleTree(rule_tokens)
-    tree._dump(tree.root)
-    for rule, defn in tree.rules_dict.items():
-        print(defn)
+    #for k,v in predicates.items(): print(k,'->',v)
+    g = Grammar(rule_tokens)    
+    #g.dump()
+    g.generate_source_text(predicates)

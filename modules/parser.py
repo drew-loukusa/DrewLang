@@ -26,6 +26,13 @@ class Parser:
     def LA(self, i): return self.LT(i)._type 
 
     def match(self, x):
+        """ Accepts token_type (int) or the token char.
+            Example: 
+                    token_type: 7      (I think)
+                    token_char: '('
+        """
+        if type(x) is str: 
+            x = self.input.getTokenType(x)
         if self.LA(1) == x: # x is token_type 
             self.consume()
         else:

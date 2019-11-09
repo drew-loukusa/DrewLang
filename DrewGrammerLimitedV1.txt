@@ -13,18 +13,21 @@ whilestat       : 'while' '(' test ')' statement            ;
 blockstat       : '{' statement * end!=RCURBRACK '}'        ;
 
 
-expr            : ( NUMBER | string )                            ;
+expr            : ( NUMBER | string )  add_expr *  end==PLUS ;
 test            : ( NAME | expr ) cmp_op ( NAME | expr )            ;
 
+add_expr        : add_op expr   ;
 string          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
 NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;                      
 NUMBER          : ('0'..'9') +                                    ;
 cmp_op          : ( DEQUALS | GE | LE | '>' | '<' ) ;
-DEQUALS          : '=' '='       ;
+add_op          : ( '+' | '-' ) ;
+DEQUALS         : '=' '='       ;
 GE              : '>' '='       ;
 LE              : '<' '='       ;
 
-PREDICATES: Map rule_name to the token_name that predicts said rule
+# Map rule_name to the token_name that predicts said rule:
+PREDICATES: 
 
 printstat -> PRINT              
 blockstat -> LCURBRACK
@@ -38,6 +41,8 @@ GE -> GT&EQUALS
 LE -> LT&EQUALS
 '<' -> LT
 '>' -> GT
+'+' -> PLUS
+'-' -> DASH
 expr -> NUMBER|DQUOTE
 assignstat -> NAME
 END

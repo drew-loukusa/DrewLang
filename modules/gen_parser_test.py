@@ -21,16 +21,17 @@ class Parser:
     def LA(self, i): return self.LT(i)._type 
 
     def match(self, x):
+        if type(x) is str: x = self.input.getTokenType(x)
         if self.LA(1) == x: # x is token_type 
             self.consume()
         else:
+            if type(x) is str: x = self.input.getTokenType(x)
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)}.")
 
-    
     def program(self):
         while self.LA(1) != self.input.EOF_TYPE:
             self.statement()
-    
+
     def statement(self):
         if self.LA(1) == self.input.PRINT:
             self.printstat()
@@ -42,76 +43,82 @@ class Parser:
             self.whilestat()
         elif self.LA(1) == self.input.NAME:
             self.assignstat()
-    
+
     def assignstat(self):
-        self.match(self.input.NAME)
-        self.match(self.input.getTokenType('='))
+        self.NAME()
+        self.match('=')
         self.expr()
-        self.match(self.input.getTokenType(';'))
-    
+        self.match(';')
+
     def printstat(self):
-        self.match(self.input.getTokenType('print'))
-        self.match(self.input.getTokenType('('))
+        self.match('print')
+        self.match('(')
         if self.LA(1) == self.input.NAME:
-            self.match(self.input.NAME)
+            self.NAME()
         elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.DQUOTE:
             self.expr()
-        self.match(self.input.getTokenType(')'))
-        self.match(self.input.getTokenType(';'))
-    
+        self.match(')')
+        self.match(';')
+
     def ifstat(self):
-        self.match(self.input.getTokenType('if'))
-        self.match(self.input.getTokenType('('))
+        self.match('if')
+        self.match('(')
         self.test()
-        self.match(self.input.getTokenType(')'))
+        self.match(')')
         self.statement()
-    
+
     def whilestat(self):
-        self.match(self.input.getTokenType('while'))
-        self.match(self.input.getTokenType('('))
+        self.match('while')
+        self.match('(')
         self.test()
-        self.match(self.input.getTokenType(')'))
+        self.match(')')
         self.statement()
-    
+
     def blockstat(self):
-        self.match(self.input.getTokenType('{'))
+        self.match('{')
         while self.LA(1) != self.input.RCURBRACK:
             self.statement()
-        self.match(self.input.getTokenType('}'))
-    
+        self.match('}')
+
     def expr(self):
         if self.LA(1) == self.input.NUMBER:
-            self.match(self.input.NUMBER)
+            self.NUMBER()
         elif self.LA(1) == self.input.DQUOTE:
-            self.STRING()
-    
+            self.string()
+        while self.LA(1) == self.input.PLUS:
+            self.add_expr()
+
     def test(self):
         if self.LA(1) == self.input.NAME:
-            self.match(self.input.NAME)
+            self.NAME()
         elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.DQUOTE:
             self.expr()
-        self.CMP_OP()
+        self.cmp_op()
         if self.LA(1) == self.input.NAME:
-            self.match(self.input.NAME)
+            self.NAME()
         elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.DQUOTE:
             self.expr()
-    
-    def NAME(self):
-        self.match(self.input.NAME)
-    
-    def STRING(self):
-        self.match(self.input.getTokenType('"'))
+
+    def add_expr(self):
+        self.add_op()
+        self.expr()
+
+    def string(self):
+        self.match('"')
         while self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER:
             if self.LA(1) == self.input.NAME:
-                self.match(self.input.NAME)
+                self.NAME()
             elif self.LA(1) == self.input.NUMBER:
-                self.match(self.input.NUMBER)
-        self.match(self.input.getTokenType('"'))
-    
+                self.NUMBER()
+        self.match('"')
+
+    def NAME(self):
+        self.match(self.input.NAME)
+
     def NUMBER(self):
         self.match(self.input.NUMBER)
-    
-    def CMP_OP(self):
+
+    def cmp_op(self):
         if self.LA(1) == self.input.EQUALS:
             self.DEQUALS()
         elif self.LA(1) == self.input.GT and self.LA(2) == self.input.EQUALS:
@@ -119,26 +126,31 @@ class Parser:
         elif self.LA(1) == self.input.LT and self.LA(2) == self.input.EQUALS:
             self.LE()
         elif self.LA(1) == self.input.GT:
-            self.match(self.input.getTokenType('>'))
+            self.match('>')
         elif self.LA(1) == self.input.LT:
-            self.match(self.input.getTokenType('<'))
-    
-    def DEQUALS(self):
-        self.match(self.input.getTokenType('='))
-        self.match(self.input.getTokenType('='))
-    
-    def GE(self):
-        self.match(self.input.getTokenType('>'))
-        self.match(self.input.getTokenType('='))
-    
-    def LE(self):
-        self.match(self.input.getTokenType('<'))
-        self.match(self.input.getTokenType('='))
+            self.match('<')
 
+    def add_op(self):
+        if self.LA(1) == self.input.PLUS:
+            self.match('+')
+        elif self.LA(1) == self.input.DASH:
+            self.match('-')
+
+    def DEQUALS(self):
+        self.match('=')
+        self.match('=')
+
+    def GE(self):
+        self.match('>')
+        self.match('=')
+
+    def LE(self):
+        self.match('<')
+        self.match('=')
 
 if __name__ == "__main__":
     import sys
-    input = """x=0;
+    input = """x=0+"hello";
 print("Helloworld");
 if(x==0){
     print("xis0");
