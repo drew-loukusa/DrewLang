@@ -44,7 +44,27 @@ class Node:
 
 class Grammar:
     """
-    Description of how this class works: I changed it completely lmao. Have to rewrite this.
+    The purpose of this class is... TODO: Write this <-----
+    General Overview: 
+
+    When creating an instance of this class, if you pass in rule_tokens on creation, __init__ will call
+    self._build_rules().
+
+    self._build_rules() will fill self.rules (a list) with Nodes.
+
+    Each Node in self.rules has: 'name' (rule name), 'type' (terminal, non-terminal, etc etc), 
+    and 'nodes' (a list of nodes which make up the rule definition).
+
+    For each Node in a rules 'definition' list, that Node could be one of several types: 
+
+            NON_TERMINAL    ;       These are nodes containg only 'name' and 'type'. 
+            TERMINAL        ;       
+             MODIFIER_INFO  ;
+
+
+            MODIFIER        ;       These nodes have 'name' 'type' AND their own list of nodes           
+            SUB_RULE        ;       SUB_RULE contains a list of nodes that define said sub_rule
+                                    And modifier ('*' or '|') contain a list of nodes which are being modified. 
     """ 
 
     def __init__(self, rule_tokens=None):
@@ -53,18 +73,23 @@ class Grammar:
         if rule_tokens: self._build_rules(rule_tokens)
 
     def dump(self):
+
+        def dive(item):
+            if item.name in ['*', '|', '+', "SUB_RULE"]:                 
+                print(f"'{item.name}' -> [ ", end='')
+                rep = ""
+                for node in item.nodes:
+                    if node.name in ['*', '|', '+', "SUB_RULE"]: dive(node)
+                    else: rep += f"{node.name}, "
+                rep += ' ]'
+                print(rep, end=', ')
+            else: print(f"{item.name}", end=', ')
+
         for rule in self.rules:
             n = 2 if len(rule.name) < 7 else 1
             print(f"{rule.name}:"+'\t'*n+'[',end=' ')
             for item in rule.nodes:
-                if item.name in ['*', '|', "SUB_RULE"]: 
-                    if item.name == "SUB_RULE": item = item.nodes[0]
-                    rep = f"'{item.name}' -> [ "
-                    for node in item.nodes:
-                        rep += f"{node.name}, "
-                    rep += ' ])'
-                    print(rep, end=', ')
-                else: print(f"{item.name}", end=', ')
+                dive(item)
             print(' ]')
 
     def _build_rules(self, rule_tokens):
@@ -96,7 +121,7 @@ class Grammar:
 
             elif rule_token.type == RuleToken.MODIFIER: 
                 #We need to grab the last node since it is being modified
-                if rule_token.text == "*":
+                if rule_token.text in ['*', '+']:
                     last = rule.nodes.pop()
                     child = Node(rule_token.text, rule_token.type)
                     child.nodes.append(last)
@@ -110,11 +135,11 @@ class Grammar:
                     child = Node(rule_token.text, rule_token.type)
                     child.nodes.append(last)
 
-                if rule_token.text == '+': 
-                    continue # Will implement later
+                # if rule_token.text == '+': 
+                #     continue # Will implement later
 
             elif rule_token.type == RuleToken.MODIFIER_INFO: 
-                # The last node should be a '*' node. So put this info in the def for it
+                # The last node should be a '*' or a '+' node. So put this info in the def for it
                 child = rule.nodes.pop()
                 node = Node(rule_token.text, rule_token.type)
                 child.nodes.append(node)
@@ -122,7 +147,7 @@ class Grammar:
             elif rule_token.type == RuleToken.SUB_RULE:
                 child = Node("SUB_RULE", rule_token.type)                
                 self._build_definition(child, rule_token.sub_list)
-                child = child.nodes[0] # Make child the 'or' node instead of SUB_RULE
+                #child = child.nodes[0] # Make child the 'or' node instead of SUB_RULE
 
             # If the last node was an 'or node', then we need 
             # to put the current node as the 'or' node's right child:
@@ -164,7 +189,7 @@ class Grammar:
                 elif child.type == RT.NON_TERMINAL: # Non-Terminal                                       
                     tab_print(f"self.{child.name}()", tab)
                 
-                if child.name == '*': 
+                if child.name == '*': # RT.MODIFIER
                     condition       = child.nodes[-1].name[5:] # Extract the loop end condition
                     condition = condition.split(',')
 
@@ -179,7 +204,7 @@ class Grammar:
 
                     generate_rule(suite, tab+1)
 
-                elif child.name == '|': 
+                elif child.name == '|': # RT.MODIFIER
 
                     def build_stat(token, predicates, if_or_elif):
                         predictor,keyword, op = [], None, None
@@ -224,7 +249,9 @@ class Grammar:
                         tab_print(build_stat(node, predicates, 'elif'), tab)
                         generate_rule(node, tab+1)
                 
-                #else: generate_rule(child, tab)
+                elif child.type == RT.SUB_RULE: 
+                    for sub_child in child.nodes:
+                        generate_rule(sub_child, tab)
 
             for child in rule.nodes:
                 generate_rule(child, tab)
@@ -268,28 +295,32 @@ def process_rule(tokens):
             rule_tokens.append(rules(token))
         i += 1
     
-    # NOTE: RULE_TOKEN DUMP: 
+    #NOTE: RULE_TOKEN DUMP: 
     # for token in rule_tokens: 
     #     print(token, ' ', end='')
     # print()
+    
     return rule_tokens
 
 if __name__ == "__main__":
     import os
-    path = os.getcwd()
-    path = path[:len(path)-7]
+    path = os.getcwd() 
 
     tokens = []
     rule_tokens = []
     predicates = {}
-    with open(path+"DrewGrammerLimitedV1.txt") as f:
+    print("cwd:",os.getcwd())
+    with open(path+"\\DrewGrammerLimitedV1.txt") as f:
         
         # Read in main portion of grammar:
         line = f.readline().rstrip()
         while "PREDICATES" not in line:     
-            if line[0] == '#': continue
+            # Ignore comments:
+            if line[0] == '#': line = f.readline(); continue
+            
             tokens+=(line.split())
             if len(tokens) == 0: line = f.readline(); continue
+            
             if tokens[-1] == ';': 
                 rule_tokens.append(process_rule(tokens))
                 tokens = []
@@ -301,7 +332,9 @@ if __name__ == "__main__":
         # but for now I have them as their own section in the grammar file.
         line = f.readline()
         while "END" != line:
-            if line[0] == '#': continue
+            # Ignore comments: 
+            if line[0] == '#': line = f.readline(); continue
+
             tokens = line.split()
             
             if len(tokens) == 0: line = f.readline() ; continue
@@ -313,5 +346,5 @@ if __name__ == "__main__":
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #for k,v in predicates.items(): print(k,'->',v)
     g = Grammar(rule_tokens)    
-    #g.dump()
-    g.generate_source_text(predicates)
+    g.dump()
+    #g.generate_source_text(predicates)
