@@ -1,22 +1,25 @@
 program         : statement * end!=EOF_TYPE ;
-statement       : ( printstat           
+statement       : printstat           
                 | blockstat   
                 | ifstat      
                 | whilestat   
-                | assignstat )
+                | assignstat
+                | funcdef
                 ;
 
 assignstat      : NAME '=' expr ';'                         ;
-printstat       : 'print' '(' ( NAME | expr ) ')' ';'         ;
+printstat       : 'print' '(' ( NAME | expr ) ')' ';'       ;
 ifstat          : 'if' '(' test ')' statement               ;
 whilestat       : 'while' '(' test ')' statement            ;
 blockstat       : '{' statement * end!=RCURBRACK '}'        ;
 
 
-#expr            : ( NUMBER | string )  add_expr *  end==PLUS ;
-#expr            : ( NUMBER | string )  ( add_op expr ) *  end==PLUS ;
-expr            : ( NUMBER | string )  ( add_op expr ) *  end==PLUS ;
-test            : ( NAME | expr ) cmp_op ( NAME | expr )            ;
+#expr            : ( NUMBER | string )  add_expr *         end==PLUS,DASH ;
+expr            : ( NUMBER | string )  ( add_op expr ) *  end==PLUS,DASH ;
+test            : ( NAME | expr ) cmp_op ( NAME | expr )                 ;
+
+funcdef         : 'def' NAME parameters statement  ;
+parameters      : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')' ;
 
 #add_expr        : add_op expr   ;
 string          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'     ;
@@ -38,6 +41,7 @@ printstat -> PRINT
 blockstat -> LCURBRACK
 ifstat -> IF
 whilestat -> WHILE
+funcdef -> DEF
 string -> DQUOTE
 NAME -> NAME
 NUMBER -> NUMBER
@@ -53,15 +57,3 @@ LE -> LT&EQUALS
 expr -> NUMBER|DQUOTE
 assignstat -> NAME
 END
-
-# TERMINAL_DEFS: 
-# I should put these IN the grammar, but for now, I'm putting them 
-# here. I'll fix this at some point, but for now with the way my 
-# parser generator works, this makes my life a little easier.
-
-NUMBER          : ('0'..'9') ;
-NAME            : ( 'a'..'z' | 'A'..'Z' ) + ;
-cmp_op          : ( '==' | '>=' | '<=' | '>' | '<' )                ;
-
-Sike, I'm putting these back in, or else my tree based impl 
-recurses forever. :)

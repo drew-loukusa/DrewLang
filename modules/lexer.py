@@ -118,6 +118,7 @@ class Lexer:
         if   multichar == 'print': token_type = self.getTokenType('print')
         elif multichar == 'while': token_type = self.getTokenType('while')
         elif multichar == 'if':    token_type = self.getTokenType('if')
+        elif multichar == 'def':   token_type = self.getTokenType('def')
         # -------------------------------------------------------------
         return Token(token_type, multichar, self.getTokenName(token_type))
 

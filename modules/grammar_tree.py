@@ -42,7 +42,7 @@ class Node:
             if item: def_list += f"{item.name}, "
         return f"{self.name}; [{def_list}]"
 
-class Grammar:
+class ParserGenerator:
     """
     The purpose of this class is... TODO: Write this <-----
     General Overview: 
@@ -348,6 +348,6 @@ if __name__ == "__main__":
             line = f.readline() 
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #for k,v in predicates.items(): print(k,'->',v)
-    g = Grammar(rule_tokens)    
+    g = ParserGenerator(rule_tokens)    
     #g.dump()
     g.generate_source_text(predicates)

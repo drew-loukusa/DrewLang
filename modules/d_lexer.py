@@ -12,7 +12,7 @@ class DLexer(Lexer):
     give_nums = lambda: list(range(1,27))
     NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
     LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQUOTE, STAR, \
-    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT = give_nums()
+    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF = give_nums()
     def __init__(self, input):
 
         # Token defitions file location:
