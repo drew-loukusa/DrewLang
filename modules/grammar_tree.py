@@ -189,12 +189,15 @@ class Grammar:
                 elif child.type == RT.NON_TERMINAL: # Non-Terminal                                       
                     tab_print(f"self.{child.name}()", tab)
                 
-                if child.name == '*': # RT.MODIFIER
-                    condition       = child.nodes[-1].name[5:] # Extract the loop end condition
-                    condition = condition.split(',')
+                if child.name in ['*', '+']: # RT.MODIFIER
+                    condition   = child.nodes[-1].name[5:] # Extract the loop end condition
+                    condition   = condition.split(',')
 
-                    comp            = child.nodes[-1].name[3:5] # Extract the comparison operator
-                    suite           = child.nodes[0] 
+                    comp        = child.nodes[-1].name[3:5] # Extract the comparison operator
+                    suite       = child.nodes[0] 
+
+                    if child.name == '+': # 1 or more of the previous token, so force match 1 time
+                        generate_rule(suite, tab)
 
                     foo = f"while self.LA(1) {comp} self.input.{condition[0]}"
                     if len(condition) > 1: 
@@ -346,5 +349,5 @@ if __name__ == "__main__":
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #for k,v in predicates.items(): print(k,'->',v)
     g = Grammar(rule_tokens)    
-    g.dump()
-    #g.generate_source_text(predicates)
+    #g.dump()
+    g.generate_source_text(predicates)
