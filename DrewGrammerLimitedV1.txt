@@ -5,9 +5,10 @@ statement       : printstat
                 | whilestat   
                 | assignstat
                 | funcdef
+                | funccall
                 ;
 
-assignstat      : NAME '=' expr ';'                         ;
+assignstat      : NAME '=' ( expr | funccall ) ';'          ;
 printstat       : 'print' '(' ( NAME | expr ) ')' ';'       ;
 ifstat          : 'if' '(' test ')' statement               ;
 whilestat       : 'while' '(' test ')' statement            ;
@@ -19,6 +20,7 @@ expr            : ( NUMBER | string )  ( add_op expr ) *  end==PLUS,DASH ;
 test            : ( NAME | expr ) cmp_op ( NAME | expr )                 ;
 
 funcdef         : 'def' NAME parameters statement  ;
+funccall        : NAME parameters ';'                                 ;
 parameters      : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')' ;
 
 #add_expr        : add_op expr   ;
@@ -56,4 +58,5 @@ LE -> LT&EQUALS
 '/' -> FSLASH
 expr -> NUMBER|DQUOTE
 assignstat -> NAME
+funccall -> NAME&LPAREN
 END

@@ -5,6 +5,7 @@
 
 """
 
+import os
 
 class RuleToken:
     RULE_NAME = 0
@@ -47,10 +48,12 @@ class ParserGenerator:
     The purpose of this class is... TODO: Write this <-----
     General Overview: 
 
-    When creating an instance of this class, if you pass in rule_tokens on creation, __init__ will call
-    self._build_rules().
+    When creating an instance of this class, you must pass in the file path of your grammar file.
 
-    self._build_rules() will fill self.rules (a list) with Nodes.
+    self.__init__() will call self._read_rules_predicates() to load in the rules as lists of rule_tokens
+    and predicates as a dict.
+
+    Then, self.__init_() calls self._build_rules() which will fill self.rules (a list) with Nodes.
 
     Each Node in self.rules has: 'name' (rule name), 'type' (terminal, non-terminal, etc etc), 
     and 'nodes' (a list of nodes which make up the rule definition).
@@ -67,12 +70,14 @@ class ParserGenerator:
                                     And modifier ('*' or '|') contain a list of nodes which are being modified. 
     """ 
 
-    def __init__(self, rule_tokens=None):
+    def __init__(self, grammar_file_path):
         self.rules = []    
+        
+        self.rule_tokens, self.predicates = self._read_rules_predicates(grammar_file_path)
+        
+        self._build_rules()
 
-        if rule_tokens: self._build_rules(rule_tokens)
-
-    def dump(self):
+    def dump(self, dump_rules=False, dump_rule_tokens=False, dump_predicates=False):
 
         def dive(item):
             if item.name in ['*', '|', '+', "SUB_RULE"]:                 
@@ -84,17 +89,32 @@ class ParserGenerator:
                 rep += ' ]'
                 print(rep, end=', ')
             else: print(f"{item.name}", end=', ')
+        
+        if dump_rule_tokens: 
+            print('-'*40)
+            print("Rule Tokens:")
+            for token_list in self.rule_tokens:
+                for token in token_list: 
+                    print(token, ' ', end='')
+                print()
 
-        for rule in self.rules:
-            n = 2 if len(rule.name) < 7 else 1
-            print(f"{rule.name}:"+'\t'*n+'[',end=' ')
-            for item in rule.nodes:
-                dive(item)
-            print(' ]')
+        if dump_predicates: 
+            print('-'*40)
+            print("Predicates:")
+            for k,v in self.predicates.items(): print(k,'->',v)
 
-    def _build_rules(self, rule_tokens):
-        """ rule_tokens is a list of rule_token lists """
-        for rule_list in rule_tokens:
+        if dump_rules:
+            print('-'*40)
+            print("Rules:")
+            for rule in self.rules:
+                n = 2 if len(rule.name) < 7 else 1
+                print(f"{rule.name}:"+'\t'*n+'[',end=' ')
+                for item in rule.nodes:
+                    dive(item)
+                print(' ]')
+
+    def _build_rules(self):        
+        for rule_list in self.rule_tokens:
         
             rule_name,rule = rule_list[0].text, None  
             rule = Node(rule_name, rule_list[0].type)    
@@ -161,193 +181,225 @@ class ParserGenerator:
             #print(f"Adding {child} to rule def...")
             rule.nodes.append(child)            
 
-    def generate_source_text(self, predicates): 
-        # Recursively iterate through all nodes in tree, generating source code 
-        # Put rule names into self.generated (dict) as they are generated.
+    def _process_rule(self, tokens):
+        # From line tokens, make a list of rule-tokens
+        # Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
+
+        rule_tokens = []
+
+        # Process rule name and ':':
+        rule_tokens.append(RuleToken(RuleToken.RULE_NAME, tokens[0])) ; tokens.pop(0); tokens.pop(0)
+
+        def rules(token):
+            # Process terminal token:
+            if token[0] == "'":    return RuleToken(RuleToken.TERMINAL,token)
+            
+            # Process modifier token:
+            elif token in '*+?|':  return RuleToken(RuleToken.MODIFIER,token)
+
+            # Process modifer info token;
+            elif len(token) >= 3 and token[0:3] == 'end':
+                                    return RuleToken(RuleToken.MODIFIER_INFO, token)
+            else:                   return RuleToken(RuleToken.NON_TERMINAL, token)
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token == ';': break
+        
+            # Process sub_rules:
+            if token == '(': 
+                i += 1; token = tokens[i]
+
+                sub_rule = RuleToken(RuleToken.SUB_RULE, None)
+                while token != ')':
+                    sub_rule.sub_list.append(rules(token))
+                    i += 1; token = tokens[i]
+                rule_tokens.append(sub_rule)
+
+            else: 
+                rule_tokens.append(rules(token))
+            i += 1
+        return rule_tokens
+
+    def _read_rules_predicates(self, grammar_file_path):
+        """ This function opens the grammar file located at 'grammar_file_path' and reads
+            in the rules and predicates.
+            
+            @ Return:
+            rule_tokens - A list of rule_token lists, one per rule
+            predicates  - A dict of rule_name to it's predictor (lexical token)
+        """
+        tokens = []
+        rule_tokens = []
+        predicates = {}
+        with open(grammar_file_path) as f:
+            
+            # Read in main portion of grammar:
+            line = f.readline().rstrip()
+            while "PREDICATES" not in line:     
+                # Ignore comments:
+                if line[0] == '#': line = f.readline(); continue
+                
+                tokens+=(line.split())
+                if len(tokens) == 0: line = f.readline(); continue
+                
+                if tokens[-1] == ';': 
+                    rule_tokens.append(self._process_rule(tokens))
+                    tokens = []
+                line = f.readline()
+
+            # Read in predicates: I use what I'm terming 'predicates' to help generate 
+            # source code. They're not strictly necessary, and I will probably revise
+            # my generator so that it can extract that info from the grammar itself,
+            # but for now I have them as their own section in the grammar file.
+            line = f.readline()
+            while "END" != line:
+                # Ignore comments: 
+                if line[0] == '#': line = f.readline(); continue
+
+                tokens = line.split()
+                
+                if len(tokens) == 0: line = f.readline() ; continue
+                if tokens[0] == "END": break
+
+                rule_name, predictor = tokens[0], tokens[2]
+                predicates[rule_name] = predictor
+                line = f.readline() 
+
+        return rule_tokens, predicates
+
+    def generate_source_text(self): 
+        """ Using self.rule_tokens and self.predicates, generates python parser code.
+            @Return: A list of strings which make up the python parser code
+        """
+        predicates = self.predicates
+        source_code_lines = []
+       
+        def gen_func_body_statement(child, tab=1):
+            """ Accepts a node, 'child', and generates the appropriate python statement, 
+                or suite of statements based on what RuleToken type the node is. 
+            """
+            if child.type == RT.TERMINAL:           # Terminal
+                add_line(f"self.match({child.name})", tab)
+
+            elif child.type == RT.NON_TERMINAL:     # Non-Terminal                                       
+                add_line(f"self.{child.name}()", tab)
+            
+            if child.name in ['*', '+']:            # RT.MODIFIER
+                condition   = child.nodes[-1].name[5:] # Extract the loop end condition
+                condition   = condition.split(',')
+
+                comp        = child.nodes[-1].name[3:5] # Extract the comparison operator
+                suite       = child.nodes[0] 
+
+                if child.name == '+': # 1 or more of the previous token, so force match 1 time:
+                    gen_func_body_statement(suite, tab)
+
+                foo = f"while self.LA(1) {comp} self.input.{condition[0]}"
+                if len(condition) > 1: 
+                    for cond in condition[1:]:
+                        foo += f" or self.LA(1) {comp} self.input.{cond}"
+                add_line(foo+':', tab)
+
+                gen_func_body_statement(suite, tab+1)
+
+            elif child.name == '|':              # RT.MODIFIER: This OR this OR this
+
+                def build_stat(token, predicates, if_or_elif):
+                    """ Soley used for building if-elif suites.
+                        Also handles using booleans in building the tests: 
+                            
+                            >>> if x or y: pass
+                            >>> if x and y: pass
+                            
+                        """
+                    predictor,keyword, op = [], None, None
+                    if if_or_elif == 'if':
+                        keyword = 'if'
+                        predictor = predicates[token.name]
+                    if if_or_elif == 'elif':
+                        keyword = 'elif'
+                        predictor = predicates[token.name]
+                    if '&' in predictor: 
+                        predictor = predictor.split('&')
+                        op = "and"
+                    elif '|' in predictor: 
+                        predictor = predictor.split('|')
+                        op = 'or'
+                    else: predictor = [predictor]
+
+                    cur_line = f"{keyword} self.LA(1) == self.input.{predictor[0]}"
+                    predictor.pop(0)
+
+                    if op == "or":
+                        # If one of the alternates has multiple predictors, handle them:
+                        for p in predictor:
+                            cur_line += f" {op} self.LA(1) == self.input.{p}"
+
+                    if op == "and":       
+                        i = 2             
+                        # If one of the alternates requires multiple predictors, handle them:
+                        for p in predictor:
+                            cur_line += f" {op} self.LA({i}) == self.input.{p}"
+                            i += 1
+                    
+                    cur_line += ':'
+                    return cur_line
+
+                # The first test will always be an 'if' statment:
+                add_line(build_stat(child.nodes[0], predicates, 'if'), tab)  # Add the test line
+                gen_func_body_statement(child.nodes[0], tab+1)                # Generate the body 
+                suite = child.nodes[1:]                                      # Remove generated line from list
+
+                # Any subsequent test will be an elif statement: 
+                for node in suite:
+                    add_line(build_stat(node, predicates, 'elif'), tab)  # Generate test line
+                    gen_func_body_statement(node, tab+1)                  # Generate the body 
+
+            elif child.type == RT.SUB_RULE:    
+                for sub_child in child.nodes:
+                    gen_func_body_statement(sub_child, tab)
+        
+        # For each rule in self.rules, generate source code for that rule:
         RT = RuleToken
         for rule in self.rules:
-            print()
+            source_code_lines.append('    ') # Insert blank line between func defs
             tab = 1
-            def tab_print(text, tab=0): print('    '*tab+text)
+            def add_line(text, tab=0): 
+                source_code_lines.append('    '*tab+text)
 
-            # Yeet out the rule name:
-            tab_print(f"def {rule.name}(self):", tab); tab += 1
+            # Generate the function name:
+            add_line(f"def {rule.name}(self):", tab); tab += 1
 
-            if rule.name in ["NAME", "NUMBER"]: # Temporary while I better integrate my grammar and token_defs
-                tab_print(f"self.match(self.input.{rule.name})", tab)  
+            # Temporary while I better integrate my grammar and token_defs
+            if rule.name in ["NAME", "NUMBER"]: 
+                add_line(f"self.match(self.input.{rule.name})", tab)  
                 continue
 
-            # NOTE: Also try to figure out how to generate recognizers 
-            # for NUMBER, NAME and maybe 'string' from the grammar.
-
-            # And give more thought to how to integrate the token_defs
-            # and the grammar together.
-            def generate_rule(child, tab=1):
-                if child.type == RT.TERMINAL: # Terminal
-                    tab_print(f"self.match({child.name})", tab)
-
-                elif child.type == RT.NON_TERMINAL: # Non-Terminal                                       
-                    tab_print(f"self.{child.name}()", tab)
-                
-                if child.name in ['*', '+']: # RT.MODIFIER
-                    condition   = child.nodes[-1].name[5:] # Extract the loop end condition
-                    condition   = condition.split(',')
-
-                    comp        = child.nodes[-1].name[3:5] # Extract the comparison operator
-                    suite       = child.nodes[0] 
-
-                    if child.name == '+': # 1 or more of the previous token, so force match 1 time
-                        generate_rule(suite, tab)
-
-                    foo = f"while self.LA(1) {comp} self.input.{condition[0]}"
-                    if len(condition) > 1: 
-                        for cond in condition[1:]:
-                            foo += f" or self.LA(1) {comp} self.input.{cond}"
-                    tab_print(foo+':', tab)
-
-                    generate_rule(suite, tab+1)
-
-                elif child.name == '|': # RT.MODIFIER
-
-                    def build_stat(token, predicates, if_or_elif):
-                        predictor,keyword, op = [], None, None
-                        if if_or_elif == 'if':
-                            keyword = 'if'
-                            predictor = predicates[token.name]
-                        if if_or_elif == 'elif':
-                            keyword = 'elif'
-                            predictor = predicates[token.name]
-                        if '&' in predictor: 
-                            predictor = predictor.split('&')
-                            op = "and"
-                        elif '|' in predictor: 
-                            predictor = predictor.split('|')
-                            op = 'or'
-                        else: predictor = [predictor]
-
-                        #print(f"predictor: {predictor}")
-
-                        cur_line = f"{keyword} self.LA(1) == self.input.{predictor[0]}"
-                        predictor.pop(0)
-
-                        #print(f"predictor: {predictor}")
-
-                        if op == "or":
-                            for p in predictor:
-                                cur_line += f" {op} self.LA(1) == self.input.{p}"
-
-                        if op == "and":       
-                            i = 2             
-                            for p in predictor:
-                                cur_line += f" {op} self.LA({i}) == self.input.{p}"
-                                i += 1
-                        
-                        cur_line += ':'
-                        return cur_line
-
-                    tab_print(build_stat(child.nodes[0], predicates, 'if'), tab)
-                    generate_rule(child.nodes[0], tab+1)
-                    suite = child.nodes[1:]
-                    for node in suite:
-                        tab_print(build_stat(node, predicates, 'elif'), tab)
-                        generate_rule(node, tab+1)
-                
-                elif child.type == RT.SUB_RULE: 
-                    for sub_child in child.nodes:
-                        generate_rule(sub_child, tab)
-
+            # Generate the function body for a rules function.
             for child in rule.nodes:
-                generate_rule(child, tab)
-
-def process_rule(tokens):
-    # From line tokens, make a list of rule-tokens
-    # Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
-
-    rule_tokens = []
-
-    # Process rule name and ':':
-    rule_tokens.append(RuleToken(RuleToken.RULE_NAME, tokens[0])) ; tokens.pop(0); tokens.pop(0)
-
-    def rules(token):
-        # Process terminal token:
-        if token[0] == "'":    return RuleToken(RuleToken.TERMINAL,token)
+                gen_func_body_statement(child, tab)
         
-        # Process modifier token:
-        elif token in '*+?|':  return RuleToken(RuleToken.MODIFIER,token)
-
-        # Process modifer info token;
-        elif len(token) >= 3 and token[0:3] == 'end':
-                                return RuleToken(RuleToken.MODIFIER_INFO, token)
-        else:                   return RuleToken(RuleToken.NON_TERMINAL, token)
-    i = 0
-    while i < len(tokens):
-        token = tokens[i]
-        if token == ';': break
-       
-        # Process sub_rules:
-        if token == '(': 
-            i += 1; token = tokens[i]
-
-            sub_rule = RuleToken(RuleToken.SUB_RULE, None)
-            while token != ')':
-                sub_rule.sub_list.append(rules(token))
-                i += 1; token = tokens[i]
-            rule_tokens.append(sub_rule)
-
-        else: 
-            rule_tokens.append(rules(token))
-        i += 1
-    
-    #NOTE: RULE_TOKEN DUMP: 
-    # for token in rule_tokens: 
-    #     print(token, ' ', end='')
-    # print()
-    
-    return rule_tokens
+        return source_code_lines
 
 if __name__ == "__main__":
-    import os
     path = os.getcwd() 
+    g = ParserGenerator(path+"\\DrewGrammerLimitedV1.txt")
+    g.dump(dump_rules=True)
+    code = g.generate_source_text()
+    #for line in code: print(line)
 
-    tokens = []
-    rule_tokens = []
-    predicates = {}
-    print("cwd:",os.getcwd())
-    with open(path+"\\DrewGrammerLimitedV1.txt") as f:
-        
-        # Read in main portion of grammar:
-        line = f.readline().rstrip()
-        while "PREDICATES" not in line:     
-            # Ignore comments:
-            if line[0] == '#': line = f.readline(); continue
-            
-            tokens+=(line.split())
-            if len(tokens) == 0: line = f.readline(); continue
-            
-            if tokens[-1] == ';': 
-                rule_tokens.append(process_rule(tokens))
-                tokens = []
-            line = f.readline()
+    """ 
+    TODO: 
 
-        # Read in predicates: I use what I'm terming 'predicates' to help generate 
-        # source code. They're not strictly necessary, and I will probably revise
-        # my generator so that it can extract that info from the grammar itself,
-        # but for now I have them as their own section in the grammar file.
-        line = f.readline()
-        while "END" != line:
-            # Ignore comments: 
-            if line[0] == '#': line = f.readline(); continue
+    *   Work on plan to consolidate token_defs and grammar
+    *   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
+            > Currently, to add NEW tokens to support new items in the gramar I have to:
+                > Add the token def to the token_defs.txt file
+                > Add the token name as an int to the dlexer.py file
+                > If it's a multichar token, add it to the lexer method in lexer.py
 
-            tokens = line.split()
-            
-            if len(tokens) == 0: line = f.readline() ; continue
-            if tokens[0] == "END": break
-
-            rule_name, predictor = tokens[0], tokens[2]
-            predicates[rule_name] = predictor
-            line = f.readline() 
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    #for k,v in predicates.items(): print(k,'->',v)
-    g = ParserGenerator(rule_tokens)    
-    #g.dump()
-    g.generate_source_text(predicates)
+            > I don't like that, it should all be generated from the grammar file.
+    
+    
+    """
