@@ -392,9 +392,11 @@ if __name__ == "__main__":
     """ 
     TODO: 
 
+    *   rename this module to not be 'grammar_tree' becaues it ain't that anymore
+
     *   Work on plan to consolidate token_defs and grammar
     *   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
-            > Currently, to add NEW tokens to support new items in the gramar I have to:
+            > Currently, to add NEW tokens to support new items in the grammar I have to:
                 > Add the token def to the token_defs.txt file
                 > Add the token name as an int to the dlexer.py file
                 > If it's a multichar token, add it to the lexer method in lexer.py
