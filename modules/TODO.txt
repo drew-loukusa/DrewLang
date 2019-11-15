@@ -9,14 +9,17 @@ TODO:
 
         > I don't like that, it should all be generated from the grammar file.
 
-        > tokens like 'while' 'def' and others are subsets of the NAME token
-          Maybe create a way to specify that in the grammar file, 
-          
-          Lex an item as NAME first, then check if the lexed token matches any subset tokens
-    
 *   Write tests for parser: Ensure it correctly parses everything in your grammar
     Consider using pytest? Or some other testing framework.
 
+
+*  Bridge the gap between d_lexer.py and parser_generator.py in regards to generating lexer methods from the grammar file.
+   Currently, we load the SOQ and MB funcs from d_lexer. 
+   I'd like it if, as the parser, we read the grammar file, saw the multi-char token defs, and generated funcs to send to 
+   the lexer to initilize it.
+
+   We have funcs in d_lexer currently, and we have the ability to parse the multi-char token defs in the parser_generator.
+   We just have to create a way to generate the functions from the list of nodes that we have. 
 
 
 

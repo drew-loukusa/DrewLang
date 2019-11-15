@@ -238,7 +238,7 @@ class ParserGenerator:
         with open(grammar_file_path) as f:
             
             # Read in main portion of grammar: The rules
-            line, tokens = f.readline().rstrip(), []
+            tokens = []
             while "PREDICATES" not in (line := f.readline()):     
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
@@ -256,7 +256,7 @@ class ParserGenerator:
             # source code. They're not strictly necessary, and I will probably revise
             # my generator so that it can extract that info from the grammar itself,
             # but for now I have them as their own section in the grammar file.
-            line = f.readline()
+            
             while "END" not in (line := f.readline()):
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
@@ -266,12 +266,14 @@ class ParserGenerator:
                 rule_name, predictor = tokens[0], tokens[2]
                 self.predicates[rule_name] = predictor
 
-    def generate_source_text(self): 
+    def generate_source_text(self, header, footer): 
         """ Using self.rule_tokens and self.predicates, generates python parser code.
             @Return: A list of strings which make up the python parser code
         """
         predicates = self.predicates
         source_code_lines = []
+
+        source_code_lines += header
        
         def gen_func_body_statement(child, tab=1):
             """ Accepts a node, 'child', and generates the appropriate python statement, 
@@ -378,6 +380,7 @@ class ParserGenerator:
             for child in rule.nodes:
                 gen_func_body_statement(child, tab)
         
+        source_code_lines += footer
         return source_code_lines
 
 def create_lexer(rule): 
@@ -386,20 +389,21 @@ def create_lexer(rule):
     return lexer
 
 if __name__ == "__main__":
-    #path = os.getcwd() 
+    import sys
+    
+    path = os.getcwd() 
+    
+    print("CWD:", path, file=sys.stderr)
+    
     g = ParserGenerator("C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt")
+    
     g.dump(dump_rules=True)
-    code = g.generate_source_text()
+   
+    header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
+    footer = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_footer.py")]
+    
+    code = g.generate_source_text(header, footer)
 
-    # lexers = []
-    # for rule in g.rules:
-    #     if rule.name in "NAME NUMBER":
-    #         print(f"{rule.name}: [",end=' ')
-    #         for item in rule.nodes:
-    #             g.print_rule(item)
-    #         print(' ]')
-    #         lexers.append(create_lexer(rule))
-
-
-    #for line in code: print(line)
+    with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
+        for line in code: f.write(line+'\n')
 

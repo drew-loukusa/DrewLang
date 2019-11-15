@@ -34,7 +34,6 @@ DEQUALS         : '=' '='                                                   ;
 GE              : '>' '='                                                   ;
 LE              : '<' '='                                                   ;
 
-#END
 
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
@@ -44,7 +43,7 @@ blockstat -> LCURBRACK
 ifstat -> IF
 whilestat -> WHILE
 funcdef -> DEF
-STRING -> DQUOTE
+STRING -> STRING
 NAME -> NAME
 NUMBER -> NUMBER
 DEQUALS -> EQUALS
@@ -56,7 +55,7 @@ LE -> LT&EQUALS
 '-' -> DASH
 '*' -> STAR
 '/' -> FSLASH
-expr -> NUMBER|DQUOTE
+expr -> NUMBER|STRING
 assignstat -> NAME
 funccall -> NAME&LPAREN
 END
