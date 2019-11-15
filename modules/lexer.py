@@ -55,7 +55,16 @@ class Lexer:
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
 
-    def __init__(self, input, fpath, multi_char_recognizers):
+
+    # TODO: Make the lexer accept a list of tuples
+    #       Each tuple is THREE funcs: 
+    #                                   start_of_sequence, 
+    #                                   member_of_body,
+    #                                   end_of_sequence
+    #       For multi-char token parsing
+    #       Not every multi char token uses end_of_sequence
+
+    def __init__(self, input: str, fpath: str, multi_char_recognizers: list):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
@@ -67,18 +76,29 @@ class Lexer:
         self.char_to_ttype = {} 
 
         # Read in token definitions from file:
-        token_defs = { l.split()[0]:l.split()[1] for l in open(fpath).readlines() }
+        lines = []
+        with open(fpath) as f: 
+            # Get to the token portion of the grammar file:
+            while "TOKENS" not in f.readline(): pass
+            # Get token lines:
+            while "END" not in (line := f.readline()): lines.append(line)
+        token_defs = { l.split()[0]:l.split()[1] for l in lines }
+
+        self.keywords = {}
 
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
         for name, i in zip(token_defs, range( 2, len(token_defs) + 2) ):
-            char = token_defs[name]
+            text = token_defs[name]
             self.__setattr__(name,i)        # Set instance field
             self.tokenNames.append(name)    # Add token_name to list of token names
-            self.char_to_ttype[char] = i    # Add char:token_name pairing to dict 
+            self.char_to_ttype[text] = i    # Add char:token_name pairing to dict 
+
+            # If token is a keyword, add it to our keyword dict:
+            if len(text) > 1 and text != "multi": self.keywords[text] = 1
             
         self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
-
+        
     def consume(self):
         """ Increments the char pointer int 'p' by one and sets 
             'c' to the next char in the input string """
@@ -100,7 +120,10 @@ class Lexer:
     def getTokenType(self, token_name: str) -> int:
         return self.char_to_ttype[token_name]
 
-    def parseMultiChar(self, char_selector, token_type: int) -> Token:
+    # TODO: Make VV accept an "end of sequence" function 
+    #       while char_selector(self.c) and not end_of_sequence(self.c):
+    #       
+    def parseMultiChar(self, token_type: int, char_selector, end_of_seq=None) -> Token:
         """ Used to parse multi char tokens. 
             * char_selector: Function for recognizing a given char
             * token_type: The type the returned token should be.
@@ -108,17 +131,22 @@ class Lexer:
             @Return: A Token of type 'token_type' """
         multichar = self.c
         self.consume()
-        while char_selector(self.c):
-            multichar += self.c
-            self.consume()
+        if end_of_seq:
+            while char_selector(self.c):
+                multichar += self.c
+                self.consume()
+            if end_of_seq(self.c):
+                multichar += self.c
+                self.consume()
+            else: 
+                raise Exception(f"Invalid character: {self.c}")
+        else:
+            while char_selector(self.c):
+                    multichar += self.c
+                    self.consume()
         
-        # NOTE:
-        # TEMPORARY CODE: I will move this elsewhere later. 
-        # I will, abstract this out, but I just need this to make my life slighty easier at the moment
-        if   multichar == 'print': token_type = self.getTokenType('print')
-        elif multichar == 'while': token_type = self.getTokenType('while')
-        elif multichar == 'if':    token_type = self.getTokenType('if')
-        elif multichar == 'def':   token_type = self.getTokenType('def')
+        # Check if multichar is a keyword token: If so, override token_type
+        if multichar in self.keywords: token_type = self.getTokenType(multichar)
         # -------------------------------------------------------------
         return Token(token_type, multichar, self.getTokenName(token_type))
 
@@ -141,9 +169,10 @@ class Lexer:
             # > Iterate through the list of functions passed in on instance creation.
             # > Use those to recognize the possible start of a multi char token.
             # > If a recognizer returns true, parse and return the token:
-            for name,recognizer in self.multi_char_recognizers:
-                if recognizer(self.c): 
-                    tkn = self.parseMultiChar(recognizer, getattr(self, name))        
+            for name,recognizer_set in self.multi_char_recognizers:
+                start_of_seq, body_memb, end_of_seq = recognizer_set
+                if start_of_seq(self.c): 
+                    tkn = self.parseMultiChar(getattr(self, name), body_memb, end_of_seq)        
                     #print(tkn)
                     return tkn
 

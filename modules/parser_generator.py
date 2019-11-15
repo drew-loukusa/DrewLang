@@ -1,8 +1,6 @@
 """ 
     This module contains code for generating a parser from a grammar, 
-    (aka a parser generator).
-
-
+    (aka a parser generator)
 """
 
 import os
@@ -33,9 +31,9 @@ class RuleToken:
 
 class Node:
     def __init__(self, name, ntype):
-        self.name = name 
-        self.type = ntype
-        self.nodes = [] # A list of nodes
+        self.name = name    # Literal text of rule
+        self.type = ntype   # RuleToken type
+        self.nodes = []     # A list of nodes
 
     def __str__(self):        
         def_list = ""
@@ -62,7 +60,7 @@ class ParserGenerator:
 
             NON_TERMINAL    ;       These are nodes containg only 'name' and 'type'. 
             TERMINAL        ;       
-             MODIFIER_INFO  ;
+            MODIFIER_INFO   ;
 
 
             MODIFIER        ;       These nodes have 'name' 'type' AND their own list of nodes           
@@ -71,25 +69,19 @@ class ParserGenerator:
     """ 
 
     def __init__(self, grammar_file_path):
-        self.rules = []    
+        self.rules = []         # List of rules (nodes) 
+        self.rule_tokens = []   # List of RuleToken lists
+        self.predicates = {}    # Dict of rule_name -> what token predicts said rule
+
+        self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates
         
-        self.rule_tokens, self.predicates = self._read_rules_predicates(grammar_file_path)
-        
-        self._build_rules()
+        self._build_rules() # Fills self.rules
 
     def dump(self, dump_rules=False, dump_rule_tokens=False, dump_predicates=False):
-
-        def dive(item):
-            if item.name in ['*', '|', '+', "SUB_RULE"]:                 
-                print(f"'{item.name}' -> [ ", end='')
-                rep = ""
-                for node in item.nodes:
-                    if node.name in ['*', '|', '+', "SUB_RULE"]: dive(node)
-                    else: rep += f"{node.name}, "
-                rep += ' ]'
-                print(rep, end=', ')
-            else: print(f"{item.name}", end=', ')
-        
+        """ 
+            Dumps the contents of ParserGenerators data stores.
+            Enable the ones you want to dump by setting their named parameters to true.
+        """
         if dump_rule_tokens: 
             print('-'*40)
             print("Rule Tokens:")
@@ -110,13 +102,27 @@ class ParserGenerator:
                 n = 2 if len(rule.name) < 7 else 1
                 print(f"{rule.name}:"+'\t'*n+'[',end=' ')
                 for item in rule.nodes:
-                    dive(item)
+                    self.print_rule(item)
                 print(' ]')
+
+    def print_rule(self, item):
+        if item.name in ['*', '|', '+', "SUB_RULE"]:                 
+            print(f"'{item.name}' -> [ ", end='')
+            rep = ""
+            for node in item.nodes:
+                if node.name in ['*', '|', '+', "SUB_RULE"]: self.print_rule(node)
+                else: rep += f"{node.name}, "
+            rep += ' ]'
+            print(rep, end=', ')
+        else: print(f"{item.name}", end=', ')
 
     def _build_rules(self):        
         for rule_list in self.rule_tokens:
         
             rule_name,rule = rule_list[0].text, None  
+
+            #print(f"Building {rule_name} rule...")
+
             rule = Node(rule_name, rule_list[0].type)    
             self.rules.append(rule)
 
@@ -221,7 +227,7 @@ class ParserGenerator:
             i += 1
         return rule_tokens
 
-    def _read_rules_predicates(self, grammar_file_path):
+    def _read_rules_and_predicates(self, grammar_file_path):
         """ This function opens the grammar file located at 'grammar_file_path' and reads
             in the rules and predicates.
             
@@ -229,44 +235,36 @@ class ParserGenerator:
             rule_tokens - A list of rule_token lists, one per rule
             predicates  - A dict of rule_name to it's predictor (lexical token)
         """
-        tokens = []
-        rule_tokens = []
-        predicates = {}
         with open(grammar_file_path) as f:
             
-            # Read in main portion of grammar:
-            line = f.readline().rstrip()
-            while "PREDICATES" not in line:     
-                # Ignore comments:
-                if line[0] == '#': line = f.readline(); continue
+            # Read in main portion of grammar: The rules
+            line, tokens = f.readline().rstrip(), []
+            while "PREDICATES" not in (line := f.readline()):     
+                # Ignore comments and blank lines:
+                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
                 
-                tokens+=(line.split())
-                if len(tokens) == 0: line = f.readline(); continue
+                # Probably should not lex the line using str.split(), 
+                # but it WORKS FOR NOW:
+                tokens += (line.split())
                 
+                # Once we've collected a rules worth of tokens, process the rule:
                 if tokens[-1] == ';': 
-                    rule_tokens.append(self._process_rule(tokens))
+                    self.rule_tokens.append(self._process_rule(tokens))
                     tokens = []
-                line = f.readline()
 
             # Read in predicates: I use what I'm terming 'predicates' to help generate 
             # source code. They're not strictly necessary, and I will probably revise
             # my generator so that it can extract that info from the grammar itself,
             # but for now I have them as their own section in the grammar file.
             line = f.readline()
-            while "END" != line:
-                # Ignore comments: 
-                if line[0] == '#': line = f.readline(); continue
+            while "END" not in (line := f.readline()):
+                # Ignore comments and blank lines:
+                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
 
                 tokens = line.split()
-                
-                if len(tokens) == 0: line = f.readline() ; continue
-                if tokens[0] == "END": break
 
                 rule_name, predictor = tokens[0], tokens[2]
-                predicates[rule_name] = predictor
-                line = f.readline() 
-
-        return rule_tokens, predicates
+                self.predicates[rule_name] = predictor
 
     def generate_source_text(self): 
         """ Using self.rule_tokens and self.predicates, generates python parser code.
@@ -372,7 +370,7 @@ class ParserGenerator:
             add_line(f"def {rule.name}(self):", tab); tab += 1
 
             # Temporary while I better integrate my grammar and token_defs
-            if rule.name in ["NAME", "NUMBER"]: 
+            if rule.name in ["NAME", "NUMBER", "STRING"]: 
                 add_line(f"self.match(self.input.{rule.name})", tab)  
                 continue
 
@@ -382,26 +380,26 @@ class ParserGenerator:
         
         return source_code_lines
 
+def create_lexer(rule): 
+    """ Used to generate a lexical recognizer for a given multi character terminal."""
+    lexer = None
+    return lexer
+
 if __name__ == "__main__":
-    path = os.getcwd() 
-    g = ParserGenerator(path+"\\DrewGrammerLimitedV1.txt")
+    #path = os.getcwd() 
+    g = ParserGenerator("C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt")
     g.dump(dump_rules=True)
     code = g.generate_source_text()
+
+    # lexers = []
+    # for rule in g.rules:
+    #     if rule.name in "NAME NUMBER":
+    #         print(f"{rule.name}: [",end=' ')
+    #         for item in rule.nodes:
+    #             g.print_rule(item)
+    #         print(' ]')
+    #         lexers.append(create_lexer(rule))
+
+
     #for line in code: print(line)
 
-    """ 
-    TODO: 
-
-    *   rename this module to not be 'grammar_tree' becaues it ain't that anymore
-
-    *   Work on plan to consolidate token_defs and grammar
-    *   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
-            > Currently, to add NEW tokens to support new items in the grammar I have to:
-                > Add the token def to the token_defs.txt file
-                > Add the token name as an int to the dlexer.py file
-                > If it's a multichar token, add it to the lexer method in lexer.py
-
-            > I don't like that, it should all be generated from the grammar file.
-    
-    
-    """

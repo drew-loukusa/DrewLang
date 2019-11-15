@@ -1,0 +1,22 @@
+TODO: 
+
+*   Work on plan to consolidate token_defs and grammar
+*   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
+        > Currently, to add NEW tokens to support new items in the grammar I have to:
+            > Add the token def to the token_defs.txt file
+            > Add the token name as an int to the dlexer.py file (only for autocomplete tho I think?)
+            > If it's a multichar token, add it to the lexer method in lexer.py
+
+        > I don't like that, it should all be generated from the grammar file.
+
+        > tokens like 'while' 'def' and others are subsets of the NAME token
+          Maybe create a way to specify that in the grammar file, 
+          
+          Lex an item as NAME first, then check if the lexed token matches any subset tokens
+    
+*   Write tests for parser: Ensure it correctly parses everything in your grammar
+    Consider using pytest? Or some other testing framework.
+
+
+
+

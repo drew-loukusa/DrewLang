@@ -9,26 +9,32 @@ from lexer import Lexer
 
 class DLexer(Lexer):
     # NOTE: The below line is just so I have member names to reference since I dynamically create my lexer at runtime.
-    give_nums = lambda: list(range(1,27))
+    give_nums = lambda: list(range(1,29))
     NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
     LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQUOTE, STAR, \
-    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF = give_nums()
+    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF, STRING = give_nums()
     def __init__(self, input):
 
         # Token defitions file location:
-        fpath="token_defs.txt"
+        fpath="DrewGrammar.txt"
 
         # Functions for lexer to use when lexing multichar tokens:
         isLetter = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
         isDigit  = lambda c: c >= '0' and c <= '9'
-        multi_char_recognizers = [ ("NAME", isLetter), ("NUMBER", isDigit) ]
+        isStringSOQ = lambda c: c == '"'
+        isStringBM  = lambda c: c != '"'
+        mcrs = [ 
+                    ("NAME", (isLetter, isLetter, None)), 
+                    ("NUMBER", (isDigit, isDigit, None)), 
+                    ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
+                ]
 
-        super().__init__(input, fpath, multi_char_recognizers)
+        super().__init__(input, fpath, mcrs)
 
 if __name__ == "__main__":
     input = \
 """x=0;
-print("Helloworld");
+print("Hello world");
 if(x==0){
     print("xis0");
     x=1;
