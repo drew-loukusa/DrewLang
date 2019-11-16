@@ -395,8 +395,9 @@ if __name__ == "__main__":
     
     print("CWD:", path, file=sys.stderr)
     
-    g = ParserGenerator("C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt")
-    
+    grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
+    g = ParserGenerator(grammar_file)
+
     g.dump(dump_rules=True)
    
     header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
@@ -404,6 +405,6 @@ if __name__ == "__main__":
     
     code = g.generate_source_text(header, footer)
 
-    with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
-        for line in code: f.write(line+'\n')
+    # with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
+    #     for line in code: f.write(line+'\n')
 

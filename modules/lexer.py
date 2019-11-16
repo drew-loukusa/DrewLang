@@ -43,7 +43,12 @@
                 super().__init__(input, token_defs, multi_char_recognizers)        
  """
 class Token:
-    def __init__(self, ttype, text, tname):
+    def __init__(self, ttype: int, text: str, tname: str):
+        """ 
+            ttype : The TYPE the token should be as an int
+            text  : The ACTUAL text of the token. Like ')' or 'print'
+            tname : The name of the token type as a string 
+        """
         self._tname = tname     # Token type as a string
         self._type = ttype      # Token type as an int
         self._text = text       # The actual token text
@@ -64,7 +69,7 @@ class Lexer:
     #       For multi-char token parsing
     #       Not every multi char token uses end_of_sequence
 
-    def __init__(self, input: str, fpath: str, multi_char_recognizers: list):
+    def __init__(self, input: str, fpath: str, multi_char_recognizers: list, visitors=None):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
@@ -98,6 +103,11 @@ class Lexer:
             if len(text) > 1 and text != "multi": self.keywords[text] = 1
             
         self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
+
+
+        # Visitors is a list of tuples: 
+        # ( Start_of_sequence_character, build_token_function )
+        self.visitors = visitors if visitors is not None else []
         
     def consume(self):
         """ Increments the char pointer int 'p' by one and sets 
@@ -107,7 +117,14 @@ class Lexer:
             self.c = self.EOF 
         else: 
             self.c = self.input[self.p]
-        
+    
+    def rewind(self, n: int):
+        """ Rewinds the character stream by 'n' characters. 
+            Sets self.p = self.p - n
+            Then, sets self.c = self.p  """
+        self.p = self.p - n 
+        self.c = self.input[self.p]
+
     def match(self, token_type: int):
         if self.c == token_type: 
             self.consume()
@@ -163,6 +180,72 @@ class Lexer:
             if self.c in [' ','\t','\n','\r']: 
                 self._WS() 
                 continue 
+
+
+            # NOTE: Experimential Changes:
+            # I'm going to experirment with passing in external functions that I then
+            # pass self.consume() and self.c() or self ? 
+
+            # Point is, the external funcs will have the ability to move the pointed at char
+            # and call consume()
+
+            # tHis will allow the lexer to match arbitrary char sequences 
+            # Each external func will have a Start-of-sequence recognizer 
+            # We call teh visitor if the S.O.Q returns true, but we don't do anything
+            # if the visitor fails to build a token: The token could possibly be something else.
+
+            # this will probably require a the ability to rewind the chararcter stream OHH
+            # This is getting into parsing territory, but I'm going to see how it goes.
+        
+            # I think rewinding just consists of resetting self.p to where it was before calling
+            # the visiting function and resetting self.c to whatever is at self.p. <-- nailed it
+
+            # might even want to create a func for that.
+            # Have each visitor func, if it does not return a token, return how many chars it recognized
+            # then we can rewind the char stream by that much.
+
+            # Like: 
+            # if recognizer_for_visitor(self.c):
+            #       token_maybe = visitor(self)  #pass in self instance to allow visitor to call consume
+            #       if token_maybe is not token: self.rewind_chars(token_maybe) 
+            for token_name, c, build_token_func in self.visitors:
+                if self.c == c: 
+                    string_or_int = build_token_func(self)
+                    if type(string_or_int) is str: 
+                        ttype = getattr(self, token_name)
+                        tname = self.getTokenName(ttype)
+                        return Token(ttype, string_or_int, tname)
+                    else: # if string_or_int is int: 
+                        self.rewind(string_or_int)
+
+            # Temp code:
+             # You could use this to lex keywords... I have a method already but...
+             # I have a thing in parseMultiChar that handles them. I'm not sure if I like it, 
+             # so Maybe I'll switch to this. The advatage to the other way is no re-winding.
+            
+            # This could allow for NON-alphanumeric chars tho:
+
+            if False:
+                keywords = [(1,2),(2,3)]
+                n = 0
+                for token_name, keyword in keywords:
+                    if keyword[0] != self.c: continue                    
+                    multi_char = self.c
+                    self.consume()
+                    for c in keyword:
+                        if c == self.c:
+                            multi_char += self.c
+                        else:
+                            self.rewind(n)
+                            break
+            
+            # More temp code to figure out how I'm going to handle set based tokens 
+            # TODO: Work on this if I feel like it. 
+            # I'm going stop working on this to go get my AST implemented k?
+            if False:
+                foobar = [(1,2,3)]
+                for token_name, start_char, descrip in foobar: 
+                    pass
 
             # Handle multi character tokens:
             # ----------------------------------------

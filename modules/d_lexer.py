@@ -21,15 +21,28 @@ class DLexer(Lexer):
         # Functions for lexer to use when lexing multichar tokens:
         isLetter = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
         isDigit  = lambda c: c >= '0' and c <= '9'
-        isStringSOQ = lambda c: c == '"'
-        isStringBM  = lambda c: c != '"'
+        #isStringSOQ = lambda c: c == '"'
+        #isStringBM  = lambda c: c != '"'
         mcrs = [ 
                     ("NAME", (isLetter, isLetter, None)), 
                     ("NUMBER", (isDigit, isDigit, None)), 
-                    ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
+                   # ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
                 ]
 
-        super().__init__(input, fpath, mcrs)
+        visitors = []
+        def build_string(lexer):
+            multi_char = lexer.c
+            lexer.consume()
+            while lexer.c != Lexer.EOF and lexer.c != '"': 
+                multi_char += lexer.c
+                lexer.consume()
+            multi_char += lexer.c
+            lexer.consume()            
+            return multi_char
+
+        visitors.append(("STRING", '"', build_string))
+
+        super().__init__(input, fpath, mcrs, visitors)
 
 if __name__ == "__main__":
     input = \

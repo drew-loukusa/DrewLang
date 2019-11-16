@@ -24,7 +24,7 @@ parameters      : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')'        ;
 
 #add_expr        : add_op expr                                              ;
 #string          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'             ;
-STRING          : '"' '^' '"'                                               ;
+STRING          : '"' . * end!=" '"'                                               ;
 NAME            : ( 'a'..'z' | 'A'..'Z' )                                   ;                      
 NUMBER          : ('0'..'9')                                                ;
 cmp_op          : DEQUALS | GE | LE | '>' | '<'                             ;
