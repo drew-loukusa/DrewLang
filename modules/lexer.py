@@ -86,7 +86,9 @@ class Lexer:
             # Get to the token portion of the grammar file:
             while "TOKENS" not in f.readline(): pass
             # Get token lines:
-            while "END" not in (line := f.readline()): lines.append(line)
+            while "END" not in (line := f.readline()): 
+                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
+                lines.append(line)
         token_defs = { l.split()[0]:l.split()[1] for l in lines }
 
         self.keywords = {}
@@ -132,10 +134,30 @@ class Lexer:
             raise Exception(f"Expecting {token_type}; found {self.c}")
 
     def getTokenName(self, token_type: int) -> str:
+        """ Returns the name of a token type given token type as an int.
+        
+            Example: getTokenName(0)    ->    returns "NAME" 
+        """
         return self.tokenNames[token_type]
     
-    def getTokenType(self, token_name: str) -> int:
-        return self.char_to_ttype[token_name]
+    def getTokenType(self, token_text: str) -> int:
+        """ Returns the token type as an int of a token given text of the token.
+            
+            Example: getTokenType('}')      ->  returns < an int > 
+        """
+        return self.char_to_ttype[token_text]
+
+    def getTokenNameFromText(self, token_text: str)  -> str:
+        """ Returns the token name as a string for a given token text string.
+            
+            Example: getTokenNameFromText('print')   ->   returns "PRINT" 
+
+            This method is ultimately checking self.char_to_ttype for the item,
+            if it isn't in it, it will return "NOT_A_TOKEN"
+        """
+        if token_text.isupper(): return token_text
+        if token_text not in self.char_to_ttype: return "NOT_A_TOKEN"
+        return self.getTokenName( self.getTokenType(token_text) )
 
     # TODO: Make VV accept an "end of sequence" function 
     #       while char_selector(self.c) and not end_of_sequence(self.c):

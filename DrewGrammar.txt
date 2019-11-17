@@ -15,8 +15,8 @@ whilestat       : 'while' '(' test ')' statement                            ;
 blockstat       : '{' statement * end!=RCURBRACK '}'                        ;
 
 #expr            : ( NUMBER | STRING )  add_expr * end==PLUS,DASH           ; 
-expr            : ( NUMBER | STRING )  ( add_op expr ) * end==PLUS,DASH     ;
-test            : ( NAME | expr ) cmp_op ( NAME | expr )                    ;
+expr            : ( NAME | NUMBER | STRING )  ( add_op expr ) * end==PLUS,DASH     ;
+test            : expr cmp_op expr                                          ;
 
 funcdef         : 'def' NAME parameters statement                           ;
 funccall        : NAME parameters ';'                                       ;
@@ -24,39 +24,42 @@ parameters      : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')'        ;
 
 #add_expr        : add_op expr                                              ;
 #string          : '"' ( NAME | NUMBER ) * end==NAME,NUMBER '"'             ;
-STRING          : '"' . * end!=" '"'                                               ;
+STRING          : '"' . * end!=" '"'                                        ;
 NAME            : ( 'a'..'z' | 'A'..'Z' )                                   ;                      
 NUMBER          : ('0'..'9')                                                ;
 cmp_op          : DEQUALS | GE | LE | '>' | '<'                             ;
 add_op          :  '+' | '-'                                                ;
 mult_op         : '*'  | '/'                                                ;
+
 DEQUALS         : '=' '='                                                   ;
 GE              : '>' '='                                                   ;
 LE              : '<' '='                                                   ;
+LT              : '<'                                                       ;
+GT              : '>'                                                       ;
 
 
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
 
-printstat -> PRINT              
-blockstat -> LCURBRACK
-ifstat -> IF
-whilestat -> WHILE
-funcdef -> DEF
-STRING -> STRING
+#printstat -> PRINT              
+#blockstat -> LCURBRACK
+#ifstat -> IF
+#whilestat -> WHILE
+#funcdef -> DEF
+#STRING -> STRING
 NAME -> NAME
 NUMBER -> NUMBER
-DEQUALS -> EQUALS
+#DEQUALS -> EQUALS
 GE -> GT&EQUALS
 LE -> LT&EQUALS
-'<' -> LT
-'>' -> GT
-'+' -> PLUS
-'-' -> DASH
-'*' -> STAR
-'/' -> FSLASH
-expr -> NUMBER|STRING
-assignstat -> NAME
+#'<' -> LT
+#'>' -> GT
+#'+' -> PLUS
+#'-' -> DASH
+#'*' -> STAR
+#'/' -> FSLASH
+#expr -> NUMBER|STRING
+#assignstat -> NAME
 funccall -> NAME&LPAREN
 END
 

@@ -4,6 +4,7 @@
 """
 
 import os
+from d_lexer import DLexer
 
 class RuleToken:
     RULE_NAME = 0
@@ -70,12 +71,15 @@ class ParserGenerator:
 
     def __init__(self, grammar_file_path):
         self.rules = []         # List of rules (nodes) 
+        self.rules_dict = {}    # The same rules, but stored as a dict:  { rule_name -> rule (Node) }
         self.rule_tokens = []   # List of RuleToken lists
         self.predicates = {}    # Dict of rule_name -> what token predicts said rule
 
         self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates
         
         self._build_rules() # Fills self.rules
+        
+        self._generate_predicates()
 
     def dump(self, dump_rules=False, dump_rule_tokens=False, dump_predicates=False):
         """ 
@@ -115,7 +119,7 @@ class ParserGenerator:
             rep += ' ]'
             print(rep, end=', ')
         else: print(f"{item.name}", end=', ')
-
+    
     def _build_rules(self):        
         for rule_list in self.rule_tokens:
         
@@ -125,6 +129,7 @@ class ParserGenerator:
 
             rule = Node(rule_name, rule_list[0].type)    
             self.rules.append(rule)
+            self.rules_dict[rule_name] = rule
 
             definition_list = rule_list[1:] # Remove rule_name token from list
             #print(f"sub-root: {rule}")
@@ -188,8 +193,9 @@ class ParserGenerator:
             rule.nodes.append(child)            
 
     def _process_rule(self, tokens):
-        # From line tokens, make a list of rule-tokens
-        # Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
+        """ From a list of text-tokens, make and return a list of rule-tokens.
+            Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
+        """
 
         rule_tokens = []
 
@@ -237,7 +243,8 @@ class ParserGenerator:
         """
         with open(grammar_file_path) as f:
             
-            # Read in main portion of grammar: The rules
+            # ------------------------------------------------------------------
+            # Read in the rules:
             tokens = []
             while "PREDICATES" not in (line := f.readline()):     
                 # Ignore comments and blank lines:
@@ -252,11 +259,14 @@ class ParserGenerator:
                     self.rule_tokens.append(self._process_rule(tokens))
                     tokens = []
 
-            # Read in predicates: I use what I'm terming 'predicates' to help generate 
-            # source code. They're not strictly necessary, and I will probably revise
-            # my generator so that it can extract that info from the grammar itself,
-            # but for now I have them as their own section in the grammar file.
-            
+            # ------------------------------------------------------------------
+            # Read in predicates: (Pre-written predicates are for rules which require
+            # 2 tokens of look ahead)
+            """ I use what I'm terming 'predicates' to help generate source code. 
+                They're not strictly necessary, and I will probably revise
+                my generator so that it can extract that info from the grammar itself,
+                but for now I have them as their own section in the grammar file.       
+            """
             while "END" not in (line := f.readline()):
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
@@ -265,6 +275,69 @@ class ParserGenerator:
 
                 rule_name, predictor = tokens[0], tokens[2]
                 self.predicates[rule_name] = predictor
+
+    def _generate_predicates(self):
+        # ------------------------------------------------------------------
+        # Generate predicates from rules:
+        lex = DLexer("test") # Create lexer so we can use DLexer.getTokenNameFromText
+        #print(lex.char_to_ttype)
+        #print(">>> >>>>>>>>>> Trying to generate predicates!")
+        #rules = self.rules[:]
+        self.rules.reverse()         # Build predicates bottom up 
+
+        def build_predicate_text(node):             
+            #print('(', node.name, ',', end='')
+            #print("trying to get predictor for:", node.name)   
+            name = ""
+            if node.name == '\'"\'': 
+                name = node.name.lstrip("'").rstrip("'")               
+            else:
+                name = node.name.rstrip('\'').lstrip('\'')
+                
+            #print(name, ')')
+
+            result = lex.getTokenNameFromText( name ) 
+            if result == "NOT_A_TOKEN": 
+                if result not in self.predicates: 
+                    build_predicate(self.rules_dict[name])
+                return self.predicates[name]
+            else: return result
+
+        def build_predicate(rule):
+            #print("Building predicate for:", rule.name)
+            if rule.name in ("statement", "program","NAME", "NUMBER"): return  
+
+            if rule.name in self.predicates: return         
+            
+            name = rule.name 
+            fnode = rule.nodes[0]
+            
+            predictor = ""
+
+            if fnode.name == "SUB_RULE": # Reach in, get the actual first node
+                fnode = fnode.nodes[0]
+
+            if fnode.name == "|": 
+                token_names = [ build_predicate_text( node ) for node in fnode.nodes ]                        
+                predictor = '|'.join(token_names)
+            
+            elif fnode.name in '*+':
+                predictor = build_predicate_text( fnode.nodes[0] )
+            
+            else: 
+                predictor = build_predicate_text( fnode )
+            
+            if name == "STRING": predictor = 'STRING'
+            self.predicates[name] = predictor
+            #print("Preds:", self.predicates)
+
+        for rule in self.rules: 
+            build_predicate(rule)
+        
+        for token_text in lex.char_to_ttype:
+            self.predicates[token_text] = lex.getTokenNameFromText(token_text)
+
+        self.rules.reverse()
 
     def generate_source_text(self, header, footer): 
         """ Using self.rule_tokens and self.predicates, generates python parser code.
@@ -313,6 +386,11 @@ class ParserGenerator:
                             >>> if x and y: pass
                             
                         """
+
+                    if len(token.name) > 1:
+                        if token.name[0] == '\'': token.name = token.name.strip('\'')
+                        if token.name[0] == '\"': token.name = token.name.strip('\"')
+
                     predictor,keyword, op = [], None, None
                     if if_or_elif == 'if':
                         keyword = 'if'
@@ -398,7 +476,7 @@ if __name__ == "__main__":
     grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
     g = ParserGenerator(grammar_file)
 
-    g.dump(dump_rules=True)
+    g.dump(dump_rules=True, dump_predicates=True)
    
     header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
     footer = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_footer.py")]
