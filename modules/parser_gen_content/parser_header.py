@@ -1,7 +1,5 @@
 from d_lexer import DLexer
 import time
-# NOTE: I think there's probably a way to generate this recursive decent parser from the grammar file, 
-#       but that seems like an exercise for another day. For now, I'm going to hand code this.
 
 class Parser:
     def __init__(self, input, k):

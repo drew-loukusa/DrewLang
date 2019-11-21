@@ -1,7 +1,5 @@
 from d_lexer import DLexer
 import time
-# NOTE: I think there's probably a way to generate this recursive decent parser from the grammar file, 
-#       but that seems like an exercise for another day. For now, I'm going to hand code this.
 
 class Parser:
     def __init__(self, input, k):
@@ -57,7 +55,7 @@ class Parser:
     def assignstat(self):
         self.NAME()
         self.match('=')
-        if self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
+        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
             self.expr()
         elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
             self.funccall()
@@ -68,7 +66,7 @@ class Parser:
         self.match('(')
         if self.LA(1) == self.input.NAME:
             self.NAME()
-        elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
+        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
             self.expr()
         self.match(')')
         self.match(';')
@@ -94,7 +92,9 @@ class Parser:
         self.match('}')
     
     def expr(self):
-        if self.LA(1) == self.input.NUMBER:
+        if self.LA(1) == self.input.NAME:
+            self.NAME()
+        elif self.LA(1) == self.input.NUMBER:
             self.NUMBER()
         elif self.LA(1) == self.input.STRING:
             self.STRING()
@@ -103,15 +103,9 @@ class Parser:
             self.expr()
     
     def test(self):
-        if self.LA(1) == self.input.NAME:
-            self.NAME()
-        elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
-            self.expr()
+        self.expr()
         self.cmp_op()
-        if self.LA(1) == self.input.NAME:
-            self.NAME()
-        elif self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
-            self.expr()
+        self.expr()
     
     def funcdef(self):
         self.match('def')

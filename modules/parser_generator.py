@@ -97,7 +97,7 @@ class ParserGenerator:
         if dump_predicates: 
             print('-'*40)
             print("Predicates:")
-            for k,v in self.predicates.items(): print(k,'->',v)
+            for k,v in self.predicates.items(): print(k,v)
 
         if dump_rules:
             print('-'*40)
@@ -280,9 +280,7 @@ class ParserGenerator:
         # ------------------------------------------------------------------
         # Generate predicates from rules:
         lex = DLexer("test") # Create lexer so we can use DLexer.getTokenNameFromText
-        #print(lex.char_to_ttype)
-        #print(">>> >>>>>>>>>> Trying to generate predicates!")
-        #rules = self.rules[:]
+      
         self.rules.reverse()         # Build predicates bottom up 
 
         def build_predicate_text(node):             
@@ -335,7 +333,10 @@ class ParserGenerator:
             build_predicate(rule)
         
         for token_text in lex.char_to_ttype:
-            self.predicates[token_text] = lex.getTokenNameFromText(token_text)
+            key = token_text
+            if token_text not in ["NAME", "NUMBER", "STRING"]: # Give quotes to terminals
+                key = "'" + token_text + "'"
+            self.predicates[key] = lex.getTokenNameFromText(token_text)
 
         self.rules.reverse()
 
@@ -358,7 +359,7 @@ class ParserGenerator:
             elif child.type == RT.NON_TERMINAL:     # Non-Terminal                                       
                 add_line(f"self.{child.name}()", tab)
             
-            if child.name in ['*', '+']:            # RT.MODIFIER
+            if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER
                 condition   = child.nodes[-1].name[5:] # Extract the loop end condition
                 condition   = condition.split(',')
 
@@ -386,11 +387,7 @@ class ParserGenerator:
                             >>> if x and y: pass
                             
                         """
-
-                    if len(token.name) > 1:
-                        if token.name[0] == '\'': token.name = token.name.strip('\'')
-                        if token.name[0] == '\"': token.name = token.name.strip('\"')
-
+                        
                     predictor,keyword, op = [], None, None
                     if if_or_elif == 'if':
                         keyword = 'if'
@@ -424,6 +421,7 @@ class ParserGenerator:
                     cur_line += ':'
                     return cur_line
 
+                #try:
                 # The first test will always be an 'if' statment:
                 add_line(build_stat(child.nodes[0], predicates, 'if'), tab)  # Add the test line
                 gen_func_body_statement(child.nodes[0], tab+1)                # Generate the body 
@@ -433,6 +431,15 @@ class ParserGenerator:
                 for node in suite:
                     add_line(build_stat(node, predicates, 'elif'), tab)  # Generate test line
                     gen_func_body_statement(node, tab+1)                  # Generate the body 
+                
+                # TODO: Continue here <-----
+                # except IndexError as e:    
+                #     print(e)
+                #     print("----------------------")
+                #     print("ERROR")
+                #     print("child:",child)
+                #     for node in child.nodes: print(node)
+                #     quit()
 
             elif child.type == RT.SUB_RULE:    
                 for sub_child in child.nodes:
@@ -461,11 +468,6 @@ class ParserGenerator:
         source_code_lines += footer
         return source_code_lines
 
-def create_lexer(rule): 
-    """ Used to generate a lexical recognizer for a given multi character terminal."""
-    lexer = None
-    return lexer
-
 if __name__ == "__main__":
     import sys
     
@@ -483,6 +485,7 @@ if __name__ == "__main__":
     
     code = g.generate_source_text(header, footer)
 
-    # with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
-    #     for line in code: f.write(line+'\n')
+    with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
+        for line in code: f.write(line+'\n')
 
+    #for line in code: print(line)

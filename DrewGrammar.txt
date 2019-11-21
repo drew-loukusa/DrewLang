@@ -34,8 +34,8 @@ mult_op         : '*'  | '/'                                                ;
 DEQUALS         : '=' '='                                                   ;
 GE              : '>' '='                                                   ;
 LE              : '<' '='                                                   ;
-LT              : '<'                                                       ;
-GT              : '>'                                                       ;
+#LT              : '<'                                                       ;
+#GT              : '>'                                                       ;
 
 
 # Map rule_name to the token_name that predicts said rule:
