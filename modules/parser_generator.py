@@ -387,7 +387,7 @@ class ParserGenerator:
                             >>> if x and y: pass
                             
                         """
-                        
+
                     predictor,keyword, op = [], None, None
                     if if_or_elif == 'if':
                         keyword = 'if'
@@ -478,7 +478,7 @@ if __name__ == "__main__":
     grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
     g = ParserGenerator(grammar_file)
 
-    g.dump(dump_rules=True, dump_predicates=True)
+    #g.dump(dump_rules=True, dump_predicates=True)
    
     header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
     footer = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_footer.py")]

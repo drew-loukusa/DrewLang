@@ -55,19 +55,13 @@ class Parser:
     def assignstat(self):
         self.NAME()
         self.match('=')
-        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
-            self.expr()
-        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
-            self.funccall()
+        self.expr()
         self.match(';')
     
     def printstat(self):
         self.match('print')
         self.match('(')
-        if self.LA(1) == self.input.NAME:
-            self.NAME()
-        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
-            self.expr()
+        self.expr()
         self.match(')')
         self.match(';')
     
@@ -92,15 +86,20 @@ class Parser:
         self.match('}')
     
     def expr(self):
+        self.sub_expr()
+        while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH or self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
+            self.math_op()
+            self.sub_expr()
+    
+    def sub_expr(self):
         if self.LA(1) == self.input.NAME:
             self.NAME()
         elif self.LA(1) == self.input.NUMBER:
             self.NUMBER()
         elif self.LA(1) == self.input.STRING:
             self.STRING()
-        while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
-            self.add_op()
-            self.expr()
+        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
+            self.funccall()
     
     def test(self):
         self.expr()
@@ -147,6 +146,12 @@ class Parser:
             self.match('>')
         elif self.LA(1) == self.input.LT:
             self.match('<')
+    
+    def math_op(self):
+        if self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
+            self.add_op()
+        elif self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
+            self.mult_op()
     
     def add_op(self):
         if self.LA(1) == self.input.PLUS:

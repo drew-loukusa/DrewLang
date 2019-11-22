@@ -21,45 +21,40 @@ class DLexer(Lexer):
         # Functions for lexer to use when lexing multichar tokens:
         isLetter = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
         isDigit  = lambda c: c >= '0' and c <= '9'
-        #isStringSOQ = lambda c: c == '"'
-        #isStringBM  = lambda c: c != '"'
+        isStringSOQ = lambda c: c == '"'
+        isStringBM  = lambda c: c != '"'
         mcrs = [ 
                     ("NAME", (isLetter, isLetter, None)), 
                     ("NUMBER", (isDigit, isDigit, None)), 
-                   # ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
+                   ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
                 ]
 
-        visitors = []
-        def build_string(lexer):
-            multi_char = lexer.c
-            lexer.consume()
-            while lexer.c != Lexer.EOF and lexer.c != '"': 
-                multi_char += lexer.c
-                lexer.consume()
-            multi_char += lexer.c
-            lexer.consume()            
-            return multi_char
+       
 
-        visitors.append(("STRING", '"', build_string))
-
-        super().__init__(input, fpath, mcrs, visitors)
+        super().__init__(input, fpath, mcrs)
 
 if __name__ == "__main__":
     input = \
 """x=0;
 print("Hello world");
-if(x==0){
+if(x>=0){
     print("xis0");
     x=1;
+
+    if ( x == 0 ) print("Fuck yeah");
 }
 """
     lexer = DLexer(input) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
-    #for k,v in lox.__dict__.items(): print(f"{k}\t: {v}")
+    #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")
 
     t = lexer.nextToken()
+    i = 0
     while t._type != lexer.EOF_TYPE:
-        print(t)
+        print(i, '\t', t)
         t = lexer.nextToken()
+        i+=1
     print(t)
+
+

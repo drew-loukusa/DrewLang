@@ -1,6 +1,5 @@
 TODO: 
 
-*   Work on plan to consolidate token_defs and grammar
 *   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
         > Currently, to add NEW tokens to support new items in the grammar I have to:
             > Add the token def to the token_defs.txt file
@@ -13,13 +12,25 @@ TODO:
     Consider using pytest? Or some other testing framework.
 
 
-*  Bridge the gap between d_lexer.py and parser_generator.py in regards to generating lexer methods from the grammar file.
-   Currently, we load the SOQ and MB funcs from d_lexer. 
-   I'd like it if, as the parser, we read the grammar file, saw the multi-char token defs, and generated funcs to send to 
-   the lexer to initilize it.
+*   Bridge the gap between d_lexer.py and parser_generator.py in regards to generating lexer methods from the grammar file.
+    Currently, we load the SOQ and MB funcs from d_lexer. 
+    I'd like it if, as the parser, we read the grammar file, saw the multi-char token defs, and generated funcs to send to 
+    the lexer to initilize it.
 
-   We have funcs in d_lexer currently, and we have the ability to parse the multi-char token defs in the parser_generator.
-   We just have to create a way to generate the functions from the list of nodes that we have. 
+    We have funcs in d_lexer currently, and we have the ability to parse the multi-char token defs in the parser_generator.
+    We just have to create a way to generate the functions from the list of nodes that we have. 
 
+   UPDATE:  Progress has been made here, but I think the BEST way to go about this is to instead just send the literal string 
+            of the multi_char token rule def to the lexer, and have IT create it's own function for lexing the rule.
+            
+            We should be able to give "NAME: ( a..z | A..Z )" to the lexer, and have IT generate or configure it's own functions.
 
+            None of this generate a visitor func, that's not necessary. 
 
+*   Generate ALL predicates from the grammar.
+    Currently we can generate all prediactes except for ones that use '&' 
+    I think adding support shouldn't be too hard though; I could, for rules that
+    have conflicting start tokens  and which thus require more lookahead to use
+    the '&' char. That would make generate predicates very easy for my program.
+
+*   Modify expression rule to be: 'expression (OPERATOR expression) * ' where OPERATOR is mult_op or add_op 
