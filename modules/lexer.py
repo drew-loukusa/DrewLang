@@ -75,7 +75,7 @@ class Lexer:
     #       For multi-char token parsing
     #       Not every multi char token uses end_of_sequence
 
-    def __init__(self, input: str, fpath: str, multi_char_recognizers: list):
+    def __init__(self, input: str, fpath: str):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
         self.c = self.input[self.p]     # Current char under pointed at by 'p'
@@ -146,9 +146,6 @@ class Lexer:
                 token_name = name                 
 
                 self.multi_char_lexers.append((start_set, char_set, token_name, multi_char_type))
-            
-        self.multi_char_recognizers = multi_char_recognizers # See nextToken() for what this is
-
         
     def consume(self):
         """ Increments the char pointer int 'p' by one and sets 
@@ -246,7 +243,7 @@ class Lexer:
             # -----------------------------------------------------------------
             for start_set, char_set, t_name, multi_char_type in self.multi_char_lexers:
                 # Start_set is one char for Pre-defined multic_char tokens
-                #      ...  is a range of chars for Non-Pre-Defined ... 
+                #      ...  is a function which checks if the char is a member for Non-Pre-Defined ... 
 
                 # Skip the body unless we have self.c == a start character (or be a member of a given char set)
                 if   multi_char_type == "PRE_DEF"     and self.c != start_set:   continue
@@ -255,8 +252,7 @@ class Lexer:
                 multi_char = self.c
                 self.consume()
 
-                if multi_char_type == "PRE_DEF": 
-                    didnt_finish = True
+                if multi_char_type == "PRE_DEF":                                         
                     for i,c in enumerate(char_set, start=1):
                         if self.c == c: 
                             multi_char += c
@@ -286,21 +282,6 @@ class Lexer:
 
                     ttype = getattr(self, t_name)
                     return Token(ttype, multi_char, self.getTokenName(ttype) )
-                
-            # Handle multi character tokens:
-            # ----------------------------------------
-            # > Iterate through the list of functions passed in on instance creation.
-            # > Use those to recognize the possible start of a multi char token.
-            # > If a recognizer returns true, parse and return the token:
-
-            # NOTE: BELOW IS WORKING CODE FOR MULTI CHAR, uncomment as needed.
-
-            # for name,recognizer_set in self.multi_char_recognizers:
-            #     start_of_seq, body_memb, end_of_seq = recognizer_set
-            #     if start_of_seq(self.c): 
-            #         tkn = self.parseMultiChar(getattr(self, name), body_memb, end_of_seq)        
-            #         #print(tkn)
-            #         return tkn
 
             # Handle single character tokens:
             # ----------------------------------------

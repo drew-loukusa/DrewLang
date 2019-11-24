@@ -234,6 +234,9 @@ class ParserGenerator:
         return rule_tokens
 
     def _read_rules_and_predicates(self, grammar_file_path):
+
+        # TODO: Seperate reading in rules and predicates, then bust any rule reading out into a module and import that stuff
+
         """ This function opens the grammar file located at 'grammar_file_path' and reads
             in the rules and predicates.
             

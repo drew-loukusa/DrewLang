@@ -12,26 +12,13 @@ class DLexer(Lexer):
     give_nums = lambda: list(range(1,29))
     NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
     LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQUOTE, STAR, \
-    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF, STRING = give_nums()
+    PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF, STRING, DEQUALS, GE, LE = give_nums()
     def __init__(self, input):
 
         # Token defitions file location:
         fpath="DrewGrammar.txt"
-
-        # Functions for lexer to use when lexing multichar tokens:
-        isLetter = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
-        isDigit  = lambda c: c >= '0' and c <= '9'
-        isStringSOQ = lambda c: c == '"'
-        isStringBM  = lambda c: c != '"'
-        mcrs = [ 
-                    ("NAME", (isLetter, isLetter, None)), 
-                    ("NUMBER", (isDigit, isDigit, None)), 
-                   ("STRING", (isStringSOQ, isStringBM, isStringSOQ))
-                ]
-
-       
-
-        super().__init__(input, fpath, mcrs)
+        
+        super().__init__(input, fpath)
 
 if __name__ == "__main__":
     input = \

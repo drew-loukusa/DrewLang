@@ -33,4 +33,21 @@ TODO:
     have conflicting start tokens  and which thus require more lookahead to use
     the '&' char. That would make generate predicates very easy for my program.
 
-*   Modify expression rule to be: 'expression (OPERATOR expression) * ' where OPERATOR is mult_op or add_op 
+*   For Nov 22, 2019: 
+        -   Continue to work on gen_parser_test_AST_CODE_EXAMPLE.py:
+            Now that you have added '>=' and others as lexical tokens,
+            (plus changed how you lex multi-char tokens to make it easier to 
+            add multi-char tokens in the future), 
+            your job there should be easier. 
+
+            Write some TEST code as well, a short little __name__ == "__main__" thingy like the other modules.
+
+            Give more thought to implementing the ^ operator for denoting ROOT of AST 
+            (for multiple options for root, use ^ ( a | b | c )) 
+
+        -   Think about making the grammar rule processing from parser_gen it's own module
+            This would allow you to import it into lexer, which it could use to get a Node 
+            based data structure of the NAME, NUMBER and STRING rules.
+
+
+        

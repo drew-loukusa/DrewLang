@@ -136,7 +136,7 @@ class Parser:
         self.match(self.input.NUMBER)
     
     def cmp_op(self):
-        if self.LA(1) == self.input.EQUALS:
+        if self.LA(1) == self.input.DEQUALS:
             self.DEQUALS()
         elif self.LA(1) == self.input.GT and self.LA(2) == self.input.EQUALS:
             self.GE()
@@ -166,16 +166,13 @@ class Parser:
             self.match('/')
     
     def DEQUALS(self):
-        self.match('=')
-        self.match('=')
+        self.match('==')
     
     def GE(self):
-        self.match('>')
-        self.match('=')
+        self.match('>=')
     
     def LE(self):
-        self.match('<')
-        self.match('=')
+        self.match('<=')
 if __name__ == "__main__":
     import sys
     input = \
