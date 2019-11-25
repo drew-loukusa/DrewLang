@@ -228,6 +228,12 @@ class Lexer:
     def _WS(self):
         """ Consumes whitespace until a non-whitespace char is encountered. """
         while self.c in [' ','\t','\n','\r']: self.consume()
+    
+    def _comment(self):
+        """ Consumes chars (starting at a '#') until a new line is encountered. """
+        while self.c != '\n': 
+            self.consume()      # Consume the comment, 
+        self.consume()          # Consume the new line 
 
     def nextToken(self):
         """ Returns the next char in the input string. 
@@ -238,6 +244,10 @@ class Lexer:
             if self.c in [' ','\t','\n','\r']: 
                 self._WS() 
                 continue 
+
+            # Skip comments: 
+            # ---------------------------------------
+            if self.c == '#': self._comment()
               
             # Handle any multi-character token, and some single char tokens:
             # -----------------------------------------------------------------

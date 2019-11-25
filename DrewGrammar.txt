@@ -6,6 +6,7 @@ statement    : printstat
              | assignstat
              | funcdef
              | funccall
+             | expr
              ;
 
 assignstat   : NAME '='  expr ';'                                               ;  
@@ -40,6 +41,7 @@ LE           : '<='                                                             
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
 
+assignstat -> NAME&EQUALS
 NAME -> NAME
 NUMBER -> NUMBER
 GE -> GT&EQUALS

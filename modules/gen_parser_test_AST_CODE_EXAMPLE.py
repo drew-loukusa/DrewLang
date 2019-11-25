@@ -35,6 +35,8 @@ class Parser:
             Example: 
                     token_type: 7      (I think)
                     token_char: '('
+
+            If self.LA(1) == x, returns an AST node with token x as the data.
         """
         if type(x) is str: 
             x = self.input.getTokenType(x)
@@ -133,6 +135,23 @@ class Parser:
         self.match('}')
 
         return self._add_children_to_root(locals(), root)
+
+    def expr(self):
+        self.sub_expr()
+        while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH or self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
+            self.math_op()
+            self.sub_expr()
+    
+    def sub_expr(self):
+        if self.LA(1) == self.input.NAME:
+            self.NAME()
+        elif self.LA(1) == self.input.NUMBER:
+            self.NUMBER()
+        elif self.LA(1) == self.input.STRING:
+            self.STRING()
+        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
+            self.funccall()    
+    
     
     def expr(self):
         node1 = None
@@ -142,6 +161,9 @@ class Parser:
             self.NUMBER()
         elif self.LA(1) == self.input.STRING:
             self.STRING()
+
+        # If there are more items, the root will change... 
+        # Multiple times maybe. You kinda need a seperate way to handle expressions... 
         while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
             self.add_op()
             self.expr()
@@ -191,30 +213,30 @@ class Parser:
     def NUMBER(self):
         return self.match(self.input.NUMBER)
     
-    def cmp_op(self):
-        root = None
+    def cmp_op(self):      
         if self.LA(1) == self.input.EQUALS:
-            root = self.DEQUALS()
+            return self.DEQUALS()
         elif self.LA(1) == self.input.GT and self.LA(2) == self.input.EQUALS:
-            root = self.GE()
+            return self.GE()
         elif self.LA(1) == self.input.LT and self.LA(2) == self.input.EQUALS:
-            root = self.LE()
+            return self.LE()
         elif self.LA(1) == self.input.GT:
-            root = self.match('>')
+            return self.match('>')
         elif self.LA(1) == self.input.LT:
-            root = self.match('<')
+            return self.match('<')
 
-        return root 
+    def math_op(self):
+        if self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
+            return self.add_op()
+        elif self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
+            return self.mult_op()
 
-    def add_op(self):
-        root = None
+    def add_op(self):        
         if self.LA(1) == self.input.PLUS:
-            root = self.match('+')
+            return self.match('+')
         elif self.LA(1) == self.input.DASH:
-            root = self.match('-')
+            return self.match('-')
 
-        return root
-    
     def mult_op(self):
         if self.LA(1) == self.input.STAR:
             return self.match('*')
@@ -222,16 +244,14 @@ class Parser:
             return self.match('/')
     
     def DEQUALS(self):
-        self.match('=')
-        self.match('=')
+        return self.match('==')
     
     def GE(self):
-        self.match('>')
-        self.match('=')
+        return self.match('>=')
     
     def LE(self):
-        self.match('<')
-        self.match('=')
+        return self.match('<=')
+
 if __name__ == "__main__":
     import sys
     input = \

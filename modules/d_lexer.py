@@ -9,7 +9,7 @@ from lexer import Lexer
 
 class DLexer(Lexer):
     # NOTE: The below line is just so I have member names to reference since I dynamically create my lexer at runtime.
-    give_nums = lambda: list(range(1,29))
+    give_nums = lambda: list(range(1,32))
     NAME, NUMBER, COMMA, PERIOD, LPAREN, RPAREN, LCURBRACK, RCURBRACK, LBRACK, \
     LBRACK, RBRACK, SEMICOLON, COLON, EQUALS, GT, LT, QUOTE, DQUOTE, STAR, \
     PLUS, DASH, FSLASH, BSLASH, IF, WHILE, PRINT, DEF, STRING, DEQUALS, GE, LE = give_nums()

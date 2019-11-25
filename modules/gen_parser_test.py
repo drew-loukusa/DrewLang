@@ -45,12 +45,14 @@ class Parser:
             self.ifstat()
         elif self.LA(1) == self.input.WHILE:
             self.whilestat()
-        elif self.LA(1) == self.input.NAME:
+        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS:
             self.assignstat()
         elif self.LA(1) == self.input.DEF:
             self.funcdef()
         elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
             self.funccall()
+        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
+            self.expr()
     
     def assignstat(self):
         self.NAME()
@@ -182,6 +184,7 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
+    #x + x;
 }
 """
     drewparser = Parser(input, 2)
