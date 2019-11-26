@@ -48,7 +48,7 @@
                 super().__init__(input, token_defs, multi_char_recognizers)        
  """
 class Token:
-    def __init__(self, ttype: int, text: str, tname: str, definition=None):
+    def __init__(self, ttype: int, text: str, tname: str, line_num, char_pos, definition=None):
         """ 
             ttype : The TYPE the token should be as an int
             text  : The ACTUAL text of the token. Like ')' or 'print'
@@ -58,6 +58,9 @@ class Token:
         self._type = ttype      # Token type as an int
         self._text = text       # The actual token text
         self._definition = definition # For tokens like NAME where NAME can be: a - z or A - Z one or more times
+
+        self._line_number = line_num
+        self._char_position = char_pos
     
     def __str__(self): return f"<'{self._text}', {self._tname}>"
 
@@ -98,6 +101,9 @@ class Lexer:
                 lines.append(line)
         token_defs = { l.split()[0]:l.split()[1] for l in lines }
 
+        self.line_num = 0    # Used when syntax errors arise to return problem char location to user 
+        self.char_pos = 0
+
         self.keywords = {}
 
         self.multi_char_lexers = []
@@ -109,7 +115,9 @@ class Lexer:
             text = token_defs[name]
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
-            self.char_to_ttype[text] = i    # Add char:token_name pairing to dict 
+            if text != "NON_PRE_DEF":       # Add char:token_name pairing to dict 
+                text = text[1:-1]           # Remove quotes to avoid double quoting 
+                self.char_to_ttype[text] = i  
 
             # If token is a keyword, add it to our keyword dict:
             if len(text) > 1 and text != "NON_PRE_DEF": self.keywords[text] = 1
@@ -133,8 +141,10 @@ class Lexer:
                         char_set = start_set
                     
                     if name == "STRING":
-                        start_set = lambda c: c == '"'
-                        char_set  = lambda c: c != '"'
+                        #start_set = lambda c: c == '"'
+                        start_set = lambda c: c == "'"
+                        #char_set  = lambda c: c != '"'
+                        char_set  = lambda c: c != "'"
                         end_set   = start_set 
 
 
@@ -155,6 +165,12 @@ class Lexer:
             self.c = self.EOF 
         else: 
             self.c = self.input[self.p]
+
+            self.char_pos += 1
+            
+            if self.c == '\n': 
+                self.char_pos = 0
+                self.line_num += 1 
     
     def rewind(self, n: int):
         """ Rewinds the character stream by 'n' characters. 
@@ -214,7 +230,7 @@ class Lexer:
                 multichar += self.c
                 self.consume()
             else: 
-                raise Exception(f"Invalid character: {self.c}")
+                raise Exception(f"Invalid character: {self.c} on line {self.line_num}, position {self.char_pos}")
         else:
             while char_selector(self.c):
                 multichar += self.c
@@ -223,14 +239,14 @@ class Lexer:
         # Check if multichar is a keyword token: If so, override token_type
         if multichar in self.keywords: token_type = self.getTokenType(multichar)
         # -------------------------------------------------------------
-        return Token(token_type, multichar, self.getTokenName(token_type))
+        return Token(token_type, multichar, self.getTokenName(token_type), self.line_num, self.char_pos)
 
     def _WS(self):
         """ Consumes whitespace until a non-whitespace char is encountered. """
         while self.c in [' ','\t','\n','\r']: self.consume()
     
     def _comment(self):
-        """ Consumes chars (starting at a '#') until a new line is encountered. """
+        """ Skips comments, lines that start with a '#', by consuming chars until a new line is encountered. """
         while self.c != '\n': 
             self.consume()      # Consume the comment, 
         self.consume()          # Consume the new line 
@@ -244,7 +260,7 @@ class Lexer:
             if self.c in [' ','\t','\n','\r']: 
                 self._WS() 
                 continue 
-
+            
             # Skip comments: 
             # ---------------------------------------
             if self.c == '#': self._comment()
@@ -257,7 +273,7 @@ class Lexer:
 
                 # Skip the body unless we have self.c == a start character (or be a member of a given char set)
                 if   multi_char_type == "PRE_DEF"     and self.c != start_set:   continue
-                elif multi_char_type == "NON_PRE_DEF" and not start_set(self.c): continue
+                elif multi_char_type == "NON_PRE_DEF" and type(start_set) != int and not start_set(self.c): continue
 
                 multi_char = self.c
                 self.consume()
@@ -269,12 +285,12 @@ class Lexer:
                             self.consume()
                     else:
                         ttype = self.char_to_ttype[multi_char]
-                        return Token(ttype, multi_char, self.getTokenName(ttype))
+                        return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos)
 
                     # Check if we lexed a single char token:
                     if len(multi_char) == 1 and multi_char in self.char_to_ttype:
                         ttype = self.char_to_ttype[multi_char]
-                        return Token(ttype, multi_char, self.getTokenName(ttype))
+                        return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos)
 
                     # If not that, rewind the char stream. We might have started to lex
                     # 'else' when we were actually trying to lex 'elif'. In that case we would 
@@ -291,21 +307,22 @@ class Lexer:
                     if t_name == "STRING": multi_char+= self.c; self.consume() 
 
                     ttype = getattr(self, t_name)
-                    return Token(ttype, multi_char, self.getTokenName(ttype) )
+                    return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
 
             # Handle single character tokens:
             # ----------------------------------------
             for c,ttype in self.char_to_ttype.items():
                 if self.c == c and ttype != "NON_PRE_DEF": 
                     self.consume()
-                    tkn = Token(ttype, c, self.getTokenName(ttype))
+                    tkn = Token(ttype, c, self.getTokenName(ttype), self.line_num, self.char_pos)
                     #print(tkn)
                     return tkn
 
             # If self.c matched no valid character then: 
-            raise Exception(f"Invalid character: {self.c}")
+            raise Exception(f"Invalid character: {self.c} on line {self.line_num}, position {self.char_pos}")
+
         
-        return Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE))
+        return Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)
 
             
           

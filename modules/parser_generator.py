@@ -33,13 +33,15 @@ class RuleToken:
 class Node:
     def __init__(self, name, ntype):
         self.name = name    # Literal text of rule
-        self.type = ntype   # RuleToken type
+        self.type = ntype   # RuleToken type as a string
         self.nodes = []     # A list of nodes
 
     def __str__(self):        
         def_list = ""
-        for item in self.nodes:
+        for item in self.nodes[:-1]:
             if item: def_list += f"{item.name}, "
+        if self.nodes[-1]: def_list += f"{item.name}"
+
         return f"{self.name}; [{def_list}]"
 
 class ParserGenerator:
@@ -70,6 +72,7 @@ class ParserGenerator:
     """ 
 
     def __init__(self, grammar_file_path):
+        self.grammar_file_path = grammar_file_path
         self.rules = []         # List of rules (nodes) 
         self.rules_dict = {}    # The same rules, but stored as a dict:  { rule_name -> rule (Node) }
         self.rule_tokens = []   # List of RuleToken lists
@@ -110,11 +113,12 @@ class ParserGenerator:
                 print(' ]')
 
     def print_rule(self, item):
-        if item.name in ['*', '|', '+', "SUB_RULE"]:                 
+        decend_set = ['*', '|', '+', '~', '?', "SUB_RULE"]
+        if item.name in decend_set:                 
             print(f"'{item.name}' -> [ ", end='')
             rep = ""
             for node in item.nodes:
-                if node.name in ['*', '|', '+', "SUB_RULE"]: self.print_rule(node)
+                if node.name in decend_set: self.print_rule(node)
                 else: rep += f"{node.name}, "
             rep += ' ]'
             print(rep, end=', ')
@@ -141,6 +145,7 @@ class ParserGenerator:
         #print(f"Current rule: {rule}")
         last = None
         last_was_or_node = False
+        last_was_not = False
         for rule_token in rule_list:
             child = None
 
@@ -152,7 +157,7 @@ class ParserGenerator:
 
             elif rule_token.type == RuleToken.MODIFIER: 
                 #We need to grab the last node since it is being modified
-                if rule_token.text in ['*', '+']:
+                if rule_token.text in ['*', '+', '?']:
                     last = rule.nodes.pop()
                     child = Node(rule_token.text, rule_token.type)
                     child.nodes.append(last)
@@ -166,8 +171,10 @@ class ParserGenerator:
                     child = Node(rule_token.text, rule_token.type)
                     child.nodes.append(last)
 
-                # if rule_token.text == '+': 
-                #     continue # Will implement later
+                if rule_token.text == '~':
+                    last_was_not = True
+                    print("HELP HELP HELP")
+                    child = Node(rule_token.text, rule_token.type)                    
 
             elif rule_token.type == RuleToken.MODIFIER_INFO: 
                 # The last node should be a '*' or a '+' node. So put this info in the def for it
@@ -186,6 +193,12 @@ class ParserGenerator:
                 last = rule.nodes.pop()
                 last.nodes.append(child)
                 last_was_or_node = False
+                child = last
+
+            if last_was_not and rule_token.type != RuleToken.MODIFIER:
+                last = rule.nodes.pop()
+                last.nodes.append(child)
+                last_was_not = False
                 child = last
 
             # Add child to the rules nodes (list):
@@ -207,7 +220,7 @@ class ParserGenerator:
             if token[0] == "'":    return RuleToken(RuleToken.TERMINAL,token)
             
             # Process modifier token:
-            elif token in '*+?|':  return RuleToken(RuleToken.MODIFIER,token)
+            elif token in '*+?|~':  return RuleToken(RuleToken.MODIFIER,token)
 
             # Process modifer info token;
             elif len(token) >= 3 and token[0:3] == 'end':
@@ -282,21 +295,22 @@ class ParserGenerator:
     def _generate_predicates(self):
         # ------------------------------------------------------------------
         # Generate predicates from rules:
-        lex = DLexer("test") # Create lexer so we can use DLexer.getTokenNameFromText
+        lex = DLexer("test", self.grammar_file_path) # Create lexer so we can use DLexer.getTokenNameFromText
       
         self.rules.reverse()         # Build predicates bottom up 
 
         def build_predicate_text(node):             
             #print('(', node.name, ',', end='')
             #print("trying to get predictor for:", node.name)   
-            name = ""
-            if node.name == '\'"\'': 
-                name = node.name.lstrip("'").rstrip("'")               
-            else:
-                name = node.name.rstrip('\'').lstrip('\'')
+            name = node.name
+            # if node.name == '\'"\'': 
+            #     name = node.name.lstrip("'").rstrip("'")               
+            # else:
+            #     name = node.name.rstrip('\'').lstrip('\'')
                 
             #print(name, ')')
-
+            if name == '"\'"': 
+                pass
             result = lex.getTokenNameFromText( name ) 
             if result == "NOT_A_TOKEN": 
                 if result not in self.predicates: 
@@ -306,7 +320,7 @@ class ParserGenerator:
 
         def build_predicate(rule):
             #print("Building predicate for:", rule.name)
-            if rule.name in ("statement", "program","NAME", "NUMBER"): return  
+            if rule.name in ("program","NAME", "NUMBER"): return  
 
             if rule.name in self.predicates: return         
             
@@ -337,8 +351,8 @@ class ParserGenerator:
         
         for token_text in lex.char_to_ttype:
             key = token_text
-            if token_text not in ["NAME", "NUMBER", "STRING"]: # Give quotes to terminals
-                key = "'" + token_text + "'"
+            #if token_text not in ["NAME", "NUMBER", "STRING"]: # Give quotes to terminals
+                #key = "'" + token_text + "'"
             self.predicates[key] = lex.getTokenNameFromText(token_text)
 
         self.rules.reverse()
@@ -352,7 +366,7 @@ class ParserGenerator:
 
         source_code_lines += header
        
-        def gen_func_body_statement(child, tab=1):
+        def gen_func_body_statement(child, tab=1, optional=False):
             """ Accepts a node, 'child', and generates the appropriate python statement, 
                 or suite of statements based on what RuleToken type the node is. 
             """
@@ -362,25 +376,28 @@ class ParserGenerator:
             elif child.type == RT.NON_TERMINAL:     # Non-Terminal                                       
                 add_line(f"self.{child.name}()", tab)
             
-            if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER
-                condition   = child.nodes[-1].name[5:] # Extract the loop end condition
-                condition   = condition.split(',')
+            if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER             
 
-                comp        = child.nodes[-1].name[3:5] # Extract the comparison operator
-                suite       = child.nodes[0] 
+                sub_child  = child.nodes[0]
+                if sub_child.name == "SUB_RULE": sub_child = sub_child.nodes[0]
+
+                foo = None
+
+                condition   = predicates[sub_child.name].split('|') # <-- This needs to support '&' and also '|' and '&' in the same predicate.  
+                suite       = child.nodes[0]    # Maybe make function for parsing predicates, maybe stick those in a data structure instead of string...
 
                 if child.name == '+': # 1 or more of the previous token, so force match 1 time:
                     gen_func_body_statement(suite, tab)
 
-                foo = f"while self.LA(1) {comp} self.input.{condition[0]}"
-                if len(condition) > 1: 
+                foo = f"while self.LA(1) == self.input.{condition[0]}"
+                if len(condition) > 1 and type(condition) != str: 
                     for cond in condition[1:]:
-                        foo += f" or self.LA(1) {comp} self.input.{cond}"
+                        foo += f" or self.LA(1) == self.input.{cond}"
                 add_line(foo+':', tab)
 
                 gen_func_body_statement(suite, tab+1)
-
-            elif child.name == '|':              # RT.MODIFIER: This OR this OR this
+            
+            elif child.name in '|':              # RT.MODIFIER: This OR this OR this
 
                 def build_stat(token, predicates, if_or_elif):
                     """ Soley used for building if-elif suites.
@@ -398,7 +415,7 @@ class ParserGenerator:
                     if if_or_elif == 'elif':
                         keyword = 'elif'
                         predictor = predicates[token.name]
-                    if '&' in predictor: 
+                    if '&' in predictor:                        #<<<< This also needs to be reworked to support a mix of '|' and '&'
                         predictor = predictor.split('&')
                         op = "and"
                     elif '|' in predictor: 
@@ -424,29 +441,30 @@ class ParserGenerator:
                     cur_line += ':'
                     return cur_line
 
-                #try:
                 # The first test will always be an 'if' statment:
                 add_line(build_stat(child.nodes[0], predicates, 'if'), tab)  # Add the test line
-                gen_func_body_statement(child.nodes[0], tab+1)                # Generate the body 
+                gen_func_body_statement(child.nodes[0], tab+1, optional)                # Generate the body 
                 suite = child.nodes[1:]                                      # Remove generated line from list
 
                 # Any subsequent test will be an elif statement: 
                 for node in suite:
-                    add_line(build_stat(node, predicates, 'elif'), tab)  # Generate test line
-                    gen_func_body_statement(node, tab+1)                  # Generate the body 
+                    add_line(
+                        build_stat(node, predicates, 'elif'), tab)  # Generate test line
+                    gen_func_body_statement(node, tab+1, optional)            # Generate the body 
                 
-                # TODO: Continue here <-----
-                # except IndexError as e:    
-                #     print(e)
-                #     print("----------------------")
-                #     print("ERROR")
-                #     print("child:",child)
-                #     for node in child.nodes: print(node)
-                #     quit()
+                if not optional:
+                    else_clause = "else: raise Exception(f\"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.\")"
+                    add_line(else_clause, tab)
+           
+            # Handle optional tokens:
+            elif child.name == '?':
+                # Any statements generated below will not raise exceptions if they fail to parse ... kinda
+                gen_func_body_statement(child.nodes[0], tab, optional=True)
 
             elif child.type == RT.SUB_RULE:    
                 for sub_child in child.nodes:
-                    gen_func_body_statement(sub_child, tab)
+                    gen_func_body_statement(sub_child, tab, optional)
+            
         
         # For each rule in self.rules, generate source code for that rule:
         RT = RuleToken
@@ -460,7 +478,7 @@ class ParserGenerator:
             add_line(f"def {rule.name}(self):", tab); tab += 1
 
             # Temporary while I better integrate my grammar and token_defs
-            if rule.name in ["NAME", "NUMBER", "STRING"]: 
+            if rule.name in ["NAME", "NUMBER", "STRING", "TERMINAL"]: 
                 add_line(f"self.match(self.input.{rule.name})", tab)  
                 continue
 
@@ -478,17 +496,21 @@ if __name__ == "__main__":
     
     print("CWD:", path, file=sys.stderr)
     
-    grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
+    #grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
+    grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt"
     g = ParserGenerator(grammar_file)
 
-    #g.dump(dump_rules=True, dump_predicates=True)
+    g.dump(dump_rules=True, dump_predicates=True)
    
     header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
     footer = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_footer.py")]
     
     code = g.generate_source_text(header, footer)
 
-    with open(path+"\\modules\\gen_parser_test.py", mode='w') as f:
+    #outpath = path+"\\modules\\gen_parser_test.py"
+    outpath = path + "\\modules\\grammar_parser.py" 
+
+    with open(outpath, mode='w') as f:
         for line in code: f.write(line+'\n')
 
     #for line in code: print(line)

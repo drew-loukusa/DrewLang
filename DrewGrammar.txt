@@ -1,4 +1,4 @@
-program      : statement * end!=EOF_TYPE ;
+program      : statement *                                                      ;
 statement    : printstat           
              | blockstat   
              | ifstat      
@@ -13,19 +13,19 @@ assignstat   : NAME '='  expr ';'                                               
 printstat    : 'print' '(' expr ')' ';'                                         ;
 ifstat       : 'if' '(' test ')' statement                                      ;
 whilestat    : 'while' '(' test ')' statement                                   ;
-blockstat    : '{' statement * end!=RCURBRACK '}'                               ;
+blockstat    : '{' statement *  '}'                                             ;
 
-expr         : sub_expr ( math_op sub_expr ) * end==PLUS,DASH,STAR,FSLASH       ;
+expr         : sub_expr ( math_op sub_expr ) *                                  ;
 sub_expr     : NAME | NUMBER | STRING | funccall                                ;
 test         : expr cmp_op expr                                                 ;
 
 funcdef      : 'def' NAME parameters statement                                  ;
 funccall     : NAME parameters ';'                                              ;
-parameters   : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')'               ;
+parameters   : '(' NAME * ( ',' NAME ) *  ')'                                   ;
 
-STRING       : '"' . * end!=" '"'                                               ;
-NAME         : ( 'a'..'z' | 'A'..'Z' )                                          ;                      
-NUMBER       : ( '0'..'9' )                                                     ;
+STRING       : '"' . * '"'                                                      ;
+NAME         : 'a'..'z' | 'A'..'Z'                                              ;                      
+NUMBER       : '0'..'9'                                                         ;
 cmp_op       : DEQUALS | GE | LE | '>' | '<'                                    ;
 math_op      : add_op | mult_op                                                 ;
 add_op       : '+' | '-'                                                        ;
@@ -53,33 +53,33 @@ END
 TOKENS: 
 # Name of token:      Token Text:
 #---------------------------------
-COMMA                   ,
-PERIOD                  .
-LPAREN                  ( 
-RPAREN                  ) 
-LCURBRACK               {
-RCURBRACK               }   
-LBRACK                  [
-RBRACK                  ]
-SEMICOLON               ;
-COLON                   :
-EQUALS                  =
-DEQUALS                 ==
-GT                      >
-GE                      >=
-LT                      < 
-LE                      <=  
-QUOTE                   '
-DQUOTE                  "
-STAR                    *
-PLUS                    +
-DASH                    -
-FSLASH                  /
-BSLASH                  \
-IF                      if 
-WHILE                   while
-PRINT                   print
-DEF                     def
+COMMA                   ','
+PERIOD                  '.'
+LPAREN                  '('
+RPAREN                  ')'
+LCURBRACK               '{'
+RCURBRACK               '}'  
+LBRACK                  '['
+RBRACK                  ']'
+SEMICOLON               ';'
+COLON                   ':'
+EQUALS                  '='
+DEQUALS                 '=='
+GT                      '>'
+GE                      '>='
+LT                      '<' 
+LE                      '<='  
+QUOTE                   "'"
+DQUOTE                  '"'
+STAR                    '*'
+PLUS                    '+'
+DASH                    '-'
+FSLASH                  '/'
+BSLASH                  '\'
+IF                      'if' 
+WHILE                   'while'
+PRINT                   'print'
+DEF                     'def'
 NAME                    NON_PRE_DEF
 NUMBER                  NON_PRE_DEF
 STRING                  NON_PRE_DEF

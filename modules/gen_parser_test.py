@@ -33,7 +33,7 @@ class Parser:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)}.")
     
     def program(self):
-        while self.LA(1) != self.input.EOF_TYPE:
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or self.LA(1) == self.input.NAME&EQUALS or self.LA(1) == self.input.DEF or self.LA(1) == self.input.NAME&LPAREN or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or self.LA(1) == self.input.NAME&LPAREN:
             self.statement()
     
     def statement(self):
@@ -51,7 +51,7 @@ class Parser:
             self.funcdef()
         elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
             self.funccall()
-        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING:
+        elif self.LA(1) == self.input.NAME|NUMBER|STRING|NAME and self.LA(2) == self.input.LPAREN:
             self.expr()
     
     def assignstat(self):
@@ -83,7 +83,7 @@ class Parser:
     
     def blockstat(self):
         self.match('{')
-        while self.LA(1) != self.input.RCURBRACK:
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or self.LA(1) == self.input.NAME&EQUALS or self.LA(1) == self.input.DEF or self.LA(1) == self.input.NAME&LPAREN or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or self.LA(1) == self.input.NAME&LPAREN:
             self.statement()
         self.match('}')
     
@@ -184,7 +184,6 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
-    #x + x;
 }
 """
     drewparser = Parser(input, 2)

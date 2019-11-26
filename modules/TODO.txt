@@ -50,4 +50,18 @@ TODO:
             based data structure of the NAME, NUMBER and STRING rules.
 
 
+
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+
+    *   Re-factor grammar to support operator precedence. See python grammar for example.
+        Add rules like: Factor, term, primary
         
+
+Just noting what I'm working on right now:
+
+Fixing build_stat to work with predicates that use both '|' and '&' as expr does.
+At the same time, you'll have to FIX where you deal with '*' to handle that as well, it does not account for that.
+
+Want to add more rules to grammar to support mathmatical precidence. 
+
+* Test that the parser correctly tells you where syntax errors are occuring (line number and char position)
