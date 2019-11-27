@@ -1,24 +1,24 @@
 grammar             : rule *                                    ;
-#grammar             : rule * | COMMENT *                        ;
 
 rule                : NAME ':' or_tokens * ';'                  ;
 
 or_tokens           : and_tokens ( '|' and_tokens ) *           ; 
 and_tokens          : cmpd_token ( '&' cmpd_token ) *           ;
-cmpd_token          : atom ( '*' | '+' | '?' ) ?                ;
-atom                : sub_rule | STRING | rule_invoke         ;
+cmpd_token          : '~' ? atom ( '*' | '+' | '?' ) ?          ;
+atom                : sub_rule | STRING | rule_invoke | range   ;
 
-sub_rule            : '(' or_tokens ')'                         ; 
-STRING              : "'" ~ "'" + "'"                               ;
+sub_rule            : '(' or_tokens * ')'                       ; 
+STRING              : "'" ~ "'" + "'"                           ;
 rule_invoke         : NAME                                      ; 
+RANGE               : . '..' .                                  ;
 
-NAME                : a..z +                                ;
-#COMMENT             : '#' ~ '\n' +                              ; 
+NAME                : a..z +                                    ;
 
 PREDICATES: 
 
 NAME        ->  NAME
 COMMENT     ->  COMMENT
+STRING      ->  STRING
 
 END
 
@@ -47,6 +47,7 @@ FSLASH                  '/'
 BSLASH                  '\'
 TILDE                   '~'
 WILDCARD                '.'
+RANGE                   '..'
 NAME                    NON_PRE_DEF
 NUMBER                  NON_PRE_DEF
 STRING                NON_PRE_DEF

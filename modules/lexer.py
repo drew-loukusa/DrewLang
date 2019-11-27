@@ -47,6 +47,9 @@
                 
                 super().__init__(input, token_defs, multi_char_recognizers)        
  """
+
+from parser_generator import GrammarReader
+
 class Token:
     def __init__(self, ttype: int, text: str, tname: str, line_num, char_pos, definition=None):
         """ 
@@ -91,15 +94,8 @@ class Lexer:
 
         # Read in token definitions from file:
         # ---------------------------------------------------------------------
-        lines = []
-        with open(fpath) as f: 
-            # Get to the token portion of the grammar file:
-            while "TOKENS" not in f.readline(): pass
-            # Get token lines:
-            while "END" not in (line := f.readline()): 
-                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
-                lines.append(line)
-        token_defs = { l.split()[0]:l.split()[1] for l in lines }
+        reader = GrammarReader()
+        token_defs = reader.read_tokens(fpath)
 
         self.line_num = 0    # Used when syntax errors arise to return problem char location to user 
         self.char_pos = 0
@@ -123,29 +119,27 @@ class Lexer:
             if len(text) > 1 and text != "NON_PRE_DEF": self.keywords[text] = 1
 
             # Add all info to multi_char_lexers:
-            if len(text) > 1:
-                start_set, char_set, token_name, multi_char_type, end_set = 0,0,0,0,0
-                if text == "NON_PRE_DEF":
-                    start_set = 0 # some range (same as char_set for NPD)
-                    char_set  = 0 
-                    multi_char_type = "NON_PRE_DEF"
-                    
-                    # TEMPORARY Until I implement a way to generate these from the grammar file:
-                    # ---------------------------------------------------------------------
-                    if name == "NAME": 
-                        start_set = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
-                        char_set  = start_set
+            if len(text) > 1 and text == "NON_PRE_DEF":
+                start_set = 0 # some range (same as char_set for NPD)
+                char_set  = 0 
+                multi_char_type = "NON_PRE_DEF"
+                
+                # TEMPORARY Until I implement a way to generate these from the grammar file:
+                # ---------------------------------------------------------------------
+                if name == "NAME": 
+                    start_set = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
+                    char_set  = start_set
 
-                    if name == "NUMBER":
-                        start_set = lambda c: c >= '0' and c <= '9'
-                        char_set = start_set
-                    
-                    if name == "STRING":
-                        #start_set = lambda c: c == '"'
-                        start_set = lambda c: c == "'"
-                        #char_set  = lambda c: c != '"'
-                        char_set  = lambda c: c != "'"
-                        end_set   = start_set 
+                if name == "NUMBER":
+                    start_set = lambda c: c >= '0' and c <= '9'
+                    char_set = start_set
+                
+                if name == "STRING":
+                    start_set = lambda c: c == '"'  # For DrewLang 
+                    #start_set = lambda c: c == "'" # For grammar grammar 
+                    char_set  = lambda c: c != '"'  # Want to make BOTH work at some point
+                    #char_set  = lambda c: c != "'" # But only accept one type at a time. 
+                    end_set   = start_set 
 
 
                 else: # PRE-DEF Token: 
@@ -156,7 +150,29 @@ class Lexer:
                 token_name = name                 
 
                 self.multi_char_lexers.append((start_set, char_set, token_name, multi_char_type))
-        
+            
+            # Generate lexing functions for NON_PRE_DEF tokens like STRING or NAME
+            if len(text) > 1:
+                start_set = 0 # some range (same as char_set for NPD)
+                char_set  = 0 
+                multi_char_type = "NON_PRE_DEF"
+
+                if type(text) is str:  # NON_PRE_DEF 
+                    # Is a NODE list with some depth (tree depth that is)
+                    pass
+                
+                else: # PRE-DEF Token: 
+                    start_set = text[0]
+                    char_set  = text 
+                    multi_char_type = "PRE_DEF"
+                
+                token_name = name                 
+
+                self.multi_char_lexers.append((start_set, 
+                                                char_set, 
+                                                token_name, 
+                                                multi_char_type))
+
     def consume(self):
         """ Increments the char pointer int 'p' by one and sets 
             'c' to the next char in the input string """
@@ -267,6 +283,7 @@ class Lexer:
               
             # Handle any multi-character token, and some single char tokens:
             # -----------------------------------------------------------------
+
             for start_set, char_set, t_name, multi_char_type in self.multi_char_lexers:
                 # Start_set is one char for Pre-defined multic_char tokens
                 #      ...  is a function which checks if the char is a member for Non-Pre-Defined ... 
@@ -280,9 +297,9 @@ class Lexer:
 
                 if multi_char_type == "PRE_DEF":                                         
                     for i,c in enumerate(char_set, start=1):
-                        if self.c == c: 
-                            multi_char += c
-                            self.consume()
+                        if self.c != c: break
+                        multi_char += c
+                        self.consume()                    
                     else:
                         ttype = self.char_to_ttype[multi_char]
                         return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos)
@@ -299,12 +316,24 @@ class Lexer:
                         self.rewind(i)
                     
                 elif multi_char_type == "NON_PRE_DEF": 
-                    while char_set(self.c):
+                    escape_next = False
+                    while char_set(self.c) or escape_next:
+                        if self.c == '\\': 
+                            escape_next = True
+                            self.consume()
                         multi_char += self.c
                         self.consume()
+                        escape_next = False
                     
                     # Temporary, see init
-                    if t_name == "STRING": multi_char+= self.c; self.consume() 
+                    if t_name == "STRING": 
+                        multi_char+= self.c; 
+                        self.consume() 
+                        # Check for double quoting, and remove it if found:
+                        if multi_char[0] == '"' and multi_char[-1] == '"' and \
+                            multi_char[1] == "'" and multi_char[-2 == "'"]:
+                            multi_char = multi_char[1:-1]
+                        pass
 
                     ttype = getattr(self, t_name)
                     return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
@@ -319,7 +348,7 @@ class Lexer:
                     return tkn
 
             # If self.c matched no valid character then: 
-            raise Exception(f"Invalid character: {self.c} on line {self.line_num}, position {self.char_pos}")
+            raise Exception(f"Invalid character: < {self.c}; ord: {ord(self.c)} > on line {self.line_num}, position {self.char_pos}")
 
         
         return Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)

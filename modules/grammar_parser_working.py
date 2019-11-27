@@ -90,22 +90,28 @@ class Parser:
         self.NAME()
     
     def range(self):
-        self..()
+       
         self.match('..')
-        self..()
-    
+         
     def NAME(self):
         self.match(self.input.NAME)
 if __name__ == "__main__":
     import sys
     input = \
-"""x=0;
-print("Helloworld");
-if(x==0){
-    print("xis0");
-    print(x);
-    x=1;
-}
+r"""
+grammar             : rule *                                    ;
+rule                : NAME ':' ortokens * ';'                   ;
+
+ortokens           : andtokens ( '|' andtokens ) *              ; 
+andtokens          : cmpdtoken ( '&' cmpdtoken ) *              ;
+cmpdtoken          : atom ( '*' | '+' | '?' ) ?                 ;
+atom                : subrule | STRING | ruleinvoke             ;
+
+subrule            : '(' ortokens ')'                           ; 
+ruleinvoke         : NAME                                       ; 
+
+STRING              : '\'' ~ '\'' + '\''                        ;
+NAME                : ( 'a' ) +                                ;
 """
     drewparser = Parser(input, 2)
-    drewparser.program()
+    drewparser.grammar()

@@ -23,20 +23,10 @@ funcdef      : 'def' NAME parameters statement                                  
 funccall     : NAME parameters ';'                                              ;
 parameters   : '(' NAME * ( ',' NAME ) *  ')'                                   ;
 
-STRING       : '"' . * '"'                                                      ;
-NAME         : 'a'..'z' | 'A'..'Z'                                              ;                      
-NUMBER       : '0'..'9'                                                         ;
-cmp_op       : DEQUALS | GE | LE | '>' | '<'                                    ;
+cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
 math_op      : add_op | mult_op                                                 ;
 add_op       : '+' | '-'                                                        ;
 mult_op      : '*' | '/'                                                        ;
-
-DEQUALS      : '=='                                                             ;
-GE           : '>='                                                             ;
-LE           : '<='                                                             ;
-#LT          : '<'                                                              ;
-#GT          : '>'                                                              ;
-
 
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
@@ -80,7 +70,7 @@ IF                      'if'
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
-NAME                    NON_PRE_DEF
-NUMBER                  NON_PRE_DEF
-STRING                  NON_PRE_DEF
+NAME                    NON_PRE_DEF     'a' .. 'z' | 'A' .. 'Z'
+NUMBER                  NON_PRE_DEF     '0' .. '9' 
+STRING                  NON_PRE_DEF     '"' . * '"'
 END 

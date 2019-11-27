@@ -45,11 +45,15 @@ TODO:
             Give more thought to implementing the ^ operator for denoting ROOT of AST 
             (for multiple options for root, use ^ ( a | b | c )) 
 
+
+                             
+            This right here. |
+                             |   
+                             |
+                             V 
         -   Think about making the grammar rule processing from parser_gen it's own module
             This would allow you to import it into lexer, which it could use to get a Node 
             based data structure of the NAME, NUMBER and STRING rules.
-
-
 
 VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 

@@ -20,14 +20,15 @@ if __name__ == "__main__":
     input = \
 """x=0;
 print("Hello world");
-if(x>=0){
+if(x >= 0){
     print("xis0");
     x=1;
 
     if ( x == 0 ) print("Fuck yeah");
 }
 """
-    lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt" ) 
+    #lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt" ) 
+    lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")

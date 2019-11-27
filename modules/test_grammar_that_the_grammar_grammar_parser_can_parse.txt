@@ -1,0 +1,15 @@
+r"""
+STRING              : '\'' '\'' + '\''                        ;
+grammar             : rule *                                    ;
+rule                : NAME ':' ortokens * ';'                   ;
+
+ortokens           : andtokens ( '|' andtokens ) *              ; 
+andtokens          : cmpdtoken ( '&' cmpdtoken ) *              ;
+cmpdtoken          : atom ( '*' | '+' | '?' ) ?                 ;
+atom                : subrule | STRING | ruleinvoke             ;
+
+subrule            : '(' ortokens ')'                           ; 
+ruleinvoke         : NAME                                       ; 
+
+NAME                : ( 'a' ) +                                ;
+"""
