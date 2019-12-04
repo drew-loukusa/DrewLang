@@ -3,7 +3,7 @@ import time
 
 class Parser:
     def __init__(self, input, k):
-        self.input = DLexer(input) 
+        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
         self.k = k      # How many lookahead tokens
         self.p = 0      # Circular index of next token positon to fill
         self.lookahead = [] # Circular lookahead buffer 
@@ -30,10 +30,10 @@ class Parser:
         if self.LA(1) == x: # x is token_type 
             self.consume()
         else:
-            raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)}.")
+            raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)} on line # {self.LT(1)._line_number}")            
     
     def program(self):
-        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or self.LA(1) == self.input.NAME&EQUALS or self.LA(1) == self.input.DEF or self.LA(1) == self.input.NAME&LPAREN or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or self.LA(1) == self.input.NAME&LPAREN:
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.statement()
     
     def statement(self):
@@ -45,14 +45,15 @@ class Parser:
             self.ifstat()
         elif self.LA(1) == self.input.WHILE:
             self.whilestat()
-        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS:
+        elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS) :
             self.assignstat()
         elif self.LA(1) == self.input.DEF:
             self.funcdef()
-        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
+        elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.funccall()
-        elif self.LA(1) == self.input.NAME|NUMBER|STRING|NAME and self.LA(2) == self.input.LPAREN:
+        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.expr()
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def assignstat(self):
         self.NAME()
@@ -83,7 +84,7 @@ class Parser:
     
     def blockstat(self):
         self.match('{')
-        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or self.LA(1) == self.input.NAME&EQUALS or self.LA(1) == self.input.DEF or self.LA(1) == self.input.NAME&LPAREN or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or self.LA(1) == self.input.NAME&LPAREN:
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.statement()
         self.match('}')
     
@@ -100,8 +101,9 @@ class Parser:
             self.NUMBER()
         elif self.LA(1) == self.input.STRING:
             self.STRING()
-        elif self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN:
+        elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.funccall()
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def test(self):
         self.expr()
@@ -121,60 +123,49 @@ class Parser:
     
     def parameters(self):
         self.match('(')
-        while self.LA(1) == self.input.NAME:
-            self.NAME()
+        if  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.COMMA) :
+            self.namelist()
+        self.match(')')
+    
+    def namelist(self):
+        self.NAME()
         while self.LA(1) == self.input.COMMA:
             self.match(',')
             self.NAME()
-        self.match(')')
-    
-    def STRING(self):
-        self.match(self.input.STRING)
-    
-    def NAME(self):
-        self.match(self.input.NAME)
-    
-    def NUMBER(self):
-        self.match(self.input.NUMBER)
     
     def cmp_op(self):
         if self.LA(1) == self.input.DEQUALS:
-            self.DEQUALS()
-        elif self.LA(1) == self.input.GT and self.LA(2) == self.input.EQUALS:
-            self.GE()
-        elif self.LA(1) == self.input.LT and self.LA(2) == self.input.EQUALS:
-            self.LE()
+            self.match('==')
+        elif self.LA(1) == self.input.GE:
+            self.match('>=')
+        elif self.LA(1) == self.input.LE:
+            self.match('<=')
         elif self.LA(1) == self.input.GT:
             self.match('>')
         elif self.LA(1) == self.input.LT:
             self.match('<')
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def math_op(self):
         if self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
             self.add_op()
         elif self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
             self.mult_op()
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def add_op(self):
         if self.LA(1) == self.input.PLUS:
             self.match('+')
         elif self.LA(1) == self.input.DASH:
             self.match('-')
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def mult_op(self):
         if self.LA(1) == self.input.STAR:
             self.match('*')
         elif self.LA(1) == self.input.FSLASH:
             self.match('/')
-    
-    def DEQUALS(self):
-        self.match('==')
-    
-    def GE(self):
-        self.match('>=')
-    
-    def LE(self):
-        self.match('<=')
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
 if __name__ == "__main__":
     import sys
     input = \

@@ -48,7 +48,7 @@
                 super().__init__(input, token_defs, multi_char_recognizers)        
  """
 
-from parser_generator import GrammarReader
+from parser_generator import GrammarReader, Node
 
 class Token:
     def __init__(self, ttype: int, text: str, tname: str, line_num, char_pos, definition=None):
@@ -111,15 +111,12 @@ class Lexer:
             text = token_defs[name]
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
-            if text != "NON_PRE_DEF":       # Add char:token_name pairing to dict 
+            if type(text) != Node:          # Add char:token_name pairing to dict 
                 text = text[1:-1]           # Remove quotes to avoid double quoting 
                 self.char_to_ttype[text] = i  
 
-            # If token is a keyword, add it to our keyword dict:
-            if len(text) > 1 and text != "NON_PRE_DEF": self.keywords[text] = 1
-
-            # Add all info to multi_char_lexers:
-            if len(text) > 1 and text == "NON_PRE_DEF":
+            # Add all info to multi_char_lexers: TEMP OUT OF ORDER WHILE I WORK ON BELOW ONE
+            if False and len(text) > 1 and type(text) == Node:
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
                 multi_char_type = "NON_PRE_DEF"
@@ -152,19 +149,20 @@ class Lexer:
                 self.multi_char_lexers.append((start_set, char_set, token_name, multi_char_type))
             
             # Generate lexing functions for NON_PRE_DEF tokens like STRING or NAME
-            if len(text) > 1:
+            # For those cases, 'text' will be the root of a Node tree 
+            if type(text) == Node or len(text) > 1:
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
                 multi_char_type = "NON_PRE_DEF"
 
-                if type(text) is str:  # NON_PRE_DEF 
-                    # Is a NODE list with some depth (tree depth that is)
-                    pass
-                
-                else: # PRE-DEF Token: 
+                if type(text) is str:  # PRE_DEF                    
                     start_set = text[0]
                     char_set  = text 
                     multi_char_type = "PRE_DEF"
+                    self.keywords[text] = 1
+
+                elif type(text) is Node: 
+                    pass
                 
                 token_name = name                 
 

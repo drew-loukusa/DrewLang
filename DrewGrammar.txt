@@ -1,4 +1,4 @@
-program      : statement *                                                      ;
+program      : statement *                                                     ;
 statement    : printstat           
              | blockstat   
              | ifstat      
@@ -21,7 +21,8 @@ test         : expr cmp_op expr                                                 
 
 funcdef      : 'def' NAME parameters statement                                  ;
 funccall     : NAME parameters ';'                                              ;
-parameters   : '(' NAME * ( ',' NAME ) *  ')'                                   ;
+parameters   : '(' namelist ? ')'                                               ;
+namelist     : NAME ( ',' NAME ) *                                              ;
 
 cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
 math_op      : add_op | mult_op                                                 ;
@@ -31,13 +32,15 @@ mult_op      : '*' | '/'                                                        
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
 
+namelist -> NAME&COMMA
 assignstat -> NAME&EQUALS
 NAME -> NAME
 NUMBER -> NUMBER
+STRING -> STRING
 GE -> GT&EQUALS
 LE -> LT&EQUALS
 funccall -> NAME&LPAREN
-
+parameters -> LPAREN
 END
 
 TOKENS: 
@@ -70,7 +73,7 @@ IF                      'if'
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
-NAME                    NON_PRE_DEF     'a' .. 'z' | 'A' .. 'Z'
+NAME                    NON_PRE_DEF     ( 'a' .. 'z' ) | ( 'A' .. 'Z' )
 NUMBER                  NON_PRE_DEF     '0' .. '9' 
 STRING                  NON_PRE_DEF     '"' . * '"'
 END 

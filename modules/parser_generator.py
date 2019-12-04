@@ -102,9 +102,12 @@ class GrammarReader:
             k,v = l_tkns[0],l_tkns[1]
             if len(l_tkns) >= 3 and l_tkns[1] == "NON_PRE_DEF":  # Generate lexer funcs
                 v = l_tkns[2:]
+                rule_tokens = self._process_rule(v, mode='token')
+                rule_AST = self._build_rule(rule_tokens, mode='token')
+
+                v = rule_AST
 
             token_defs[k] = v
-        
        
         return token_defs
 
@@ -150,44 +153,58 @@ class GrammarReader:
     
     def _build_rules(self):        
         for rule_list in self.rule_tokens:
-            self._build_rule(rule_list)
+            self._build_rule(rule_list, mode='rule')
         
-    def _build_rule(self, rule_list):
+    def _build_rule(self, rule_list, mode):
         rule_name,rule = rule_list[0].text, None  
 
-        #print(f"Building {rule_name} rule...")
-
-        rule = Node(rule_name, rule_list[0].type)    
-        self.rules.append(rule)
-        self.rules_dict[rule_name] = rule
-
-        definition_list = rule_list[1:] # Remove rule_name token from list
-        #print(f"sub-root: {rule}")
+        rule = Node(name="BLANK", ntype=0)
+        definition_list = rule_list
+        if  mode == 'rule': 
+            rule = Node(rule_name, rule_list[0].type)    
+            self.rules.append(rule)
+            self.rules_dict[rule_name] = rule
+            definition_list = rule_list[1:] # Remove rule_name token from list
+        
         self._build_definition(rule, definition_list)
+        return rule 
 
     def _build_definition(self, rule, rule_list):
         #print(".........................")
         #print("Top of build_def():")
         #print(f"Current rule: {rule}")
+
+        def get_last_node():
+            last = rule.nodes.pop()
+            if last.name == "SUB_RULE" and last.nodes[0].type == RuleToken.MODIFIER:
+                last = last.nodes[0]
+            return last
+
+        def find_next_valid_token(node):
+            if node.name in ['|','*','+','~', '?',"SUB_RULE"]:
+                node = find_next_valid_token(node.nodes[0])    
+            return node 
+
         last = None
         last_was_or_node = False
         last_was_not = False
         last_was_star = False
+        last_was_range = False
         for rule_token in rule_list:
             child = None
 
             if rule_token.type == RuleToken.NON_TERMINAL:                 
-                child = Node(rule_token.text, rule_token.type)
+                child = Node(name=rule_token.text, ntype=rule_token.type)
                 
             elif rule_token.type == RuleToken.TERMINAL: 
-                child = Node(rule_token.text, rule_token.type)
+                child = Node(name=rule_token.text, ntype=rule_token.type)
 
             elif rule_token.type == RuleToken.MODIFIER: 
                 #We need to grab the last node since it is being modified
                 if rule_token.text in ['*', '+', '?']:
                     if rule_token.text == '*': last_was_star = True
-                    last = rule.nodes.pop()
-                    child = Node(rule_token.text, rule_token.type)
+                    last = get_last_node()
+                    child = Node(name=rule_token.text, ntype=rule_token.type)
                     child.nodes.append(last)
 
                 if rule_token.text == '|': 
@@ -195,41 +212,55 @@ class GrammarReader:
                     
                     if rule.nodes[-1].name == '|': continue
                     
-                    last = rule.nodes.pop()
-                    child = Node(rule_token.text, rule_token.type)
+                    last = get_last_node()
+                    child = Node(name=rule_token.text, ntype=rule_token.type)
+                    child.nodes.append(last)
+
+                if rule_token.text == '..':
+                    last_was_range = True 
+                    last = get_last_node()
+                    child = Node(name=rule_token.text, ntype=rule_token.type)
                     child.nodes.append(last)
 
                 if rule_token.text == '~':
                     last_was_not = True
-                    #print("HELP HELP HELP")
-                    child = Node(rule_token.text, rule_token.type)              
+                    child = Node(name=rule_token.text, ntype=rule_token.type)              
 
             elif rule_token.type == RuleToken.SUB_RULE:
-                child = Node("SUB_RULE", rule_token.type)                
+                child = Node(name="SUB_RULE", ntype=rule_token.type)       
                 self._build_definition(child, rule_token.sub_list)
-                #child = child.nodes[0] # Make child the 'or' node instead of SUB_RULE
+                
+                # Make the modifier node the child instead of SUB_RULE, since 
+                # modifiers only ever serve as root nodes for a tree:
+                if child.nodes[0].type == RuleToken.MODIFIER:
+                    child = child.nodes[0] 
 
             # If the last node was an 'or node', then we need 
             # to put the current node as the 'or' node's right child:
-            if last_was_or_node and len(rule.nodes) > 0:                 
-                last = rule.nodes.pop()
+            if last_was_or_node and rule_token.type != RuleToken.MODIFIER:                 
+                last = get_last_node()
                 last.nodes.append(child)
                 last_was_or_node = False
                 child = last
 
             if last_was_not and rule_token.type != RuleToken.MODIFIER:
-                last = rule.nodes.pop()
+                last = get_last_node()
                 last.nodes.append(child)
                 last_was_not = False
                 child = last
 
+            if last_was_range and rule_token.type != RuleToken.MODIFIER:
+                last = get_last_node()     # <- figure out why the list is empty when I try to pop it. 
+                last.nodes.append(child)    # Working on getting proper AST sent to the lexer 
+                last_was_range = False
+                child = last
+
             # IF a token follows after a '*' operator, that token can be used
-            # as the end condition for the generated while loop.            
-            # Grab it, stick it in the '*' nodes child list, and then put both 
-            # in the rule def list
+            # as the end condition for the while loop of the token preceding the '*'.
+            # Example: . * 'b' -> means match any char as long it's not 'b'.        
             if last_was_star and rule_token.type != RuleToken.MODIFIER:
-                last = rule.nodes.pop()
-                last.nodes.append(child)
+                last = get_last_node()
+                last.nodes.append(find_next_valid_token(child))
                 last_was_star = False
                 rule.nodes.append(last)
 
@@ -237,7 +268,7 @@ class GrammarReader:
             #print(f"Adding {child} to rule def...")
             rule.nodes.append(child)            
 
-    def _process_rule(self, tokens, token_rule=False):
+    def _process_rule(self, tokens, mode='rule'):
         """ From a list of text-tokens, make and return a list of rule-tokens.
             Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
         """
@@ -245,7 +276,7 @@ class GrammarReader:
         rule_tokens = []
 
         # Process rule name and ':':
-        if not token_rule:
+        if mode == 'rule':
             rule_tokens.append(RuleToken(RuleToken.RULE_NAME, tokens[0]))
             tokens.pop(0)
             tokens.pop(0)
@@ -255,7 +286,7 @@ class GrammarReader:
             if token[0] == "'":    return RuleToken(RuleToken.TERMINAL,token)
             
             # Process modifier token:
-            elif token in '*+?|~':  return RuleToken(RuleToken.MODIFIER,token)
+            elif token in list('*+?|~')+['..']: return RuleToken(RuleToken.MODIFIER,token)
 
             # Process modifer info token;
             elif len(token) >= 3 and token[0:3] == 'end':
@@ -396,11 +427,53 @@ class ParserGenerator( GrammarReader ):
     def __init__(self, grammar_file_path):
         super().__init__(grammar_file_path, mode='rule')
 
+    def _strip_quotes(self, name):
+        """ Strips single quotes on both sides of a string if present"""
+        if len(name) >= 3 and name[0] == r"'" and name[-1] == r"'":
+            return name[1:-1]
+        return name 
+
+    def build_cmpd_stat(self, token, keyword):
+        """ Returns a complete if/elif/while statement """
+        predictor = []
+        name = self._strip_quotes(token.name)                
+        predictor = self.predicates[name]         
+
+        preds = []
+        for p in predictor.split('|'):                            
+            if '&' in p:                        
+                p = p.split('&')                                
+            preds.append(p)
+        
+        cur_line = f"{keyword} "
+        comp_op = '=='
+        
+        if keyword == 'while':
+            # Do we have an end condition present in the list from when the rules were built:
+            if len(token.nodes) > 1:
+                name = self._strip_quotes(token.nodes[-1].name)
+                preds = [self.predicates[name]]    
+                comp_op = '!='    
+
+        for k,p in enumerate(preds, start=1):
+            if type(p) is list:   # List means x AND y AND z etc etc
+                if k > 1: cur_line += ' or '
+                cur_line += " ("
+                for i,sub_p in enumerate(p, start=1):
+                    if i > 1: cur_line += " and "
+                    cur_line += f"self.LA({i}) {comp_op} self.input.{sub_p}"
+                cur_line += ") "
+            else:
+                if k > 1: cur_line += " or "
+                cur_line += f"self.LA(1) {comp_op} self.input.{p}"
+        cur_line += ':'
+        
+        return cur_line
+
     def generate_source_text(self, header, footer): 
         """ Using self.rule_tokens and self.predicates, generates python parser code.
             @Return: A list of strings which make up the python parser code
-        """
-        predicates = self.predicates
+        """        
         source_code_lines = []
 
         source_code_lines += header
@@ -409,114 +482,57 @@ class ParserGenerator( GrammarReader ):
             """ Accepts a node, 'child', and generates the appropriate python statement, 
                 or suite of statements based on what RuleToken type the node is. 
             """
-            if child.type == RT.TERMINAL:           # Terminal
+            if child.type in [RT.TERMINAL, RT.NON_TERMINAL]:           
                 ltab = tab 
-                if optional: 
-                    name = child.name
-                    if len(name) >= 3 and name[0] == r"'" and name[-1] == r"'":
-                        name = name[1:-1]
-                    add_line(f"if self.LA(1) == self.input.{self.predicates[name]}:", ltab)
+                if optional:                     
+                    add_line(
+                        self.build_cmpd_stat(token=child, keyword='if'),
+                        ltab
+                    )
                     ltab += 1
-                add_line(f"self.match({child.name})", ltab)
 
-            elif child.type == RT.NON_TERMINAL:     # Non-Terminal                                       
-                add_line(f"self.{child.name}()", tab)
+                if child.type == RT.TERMINAL:
+                    add_line(f"self.match({child.name})", ltab)
+                else:
+                    add_line(f"self.{child.name}()", ltab)
             
             if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER             
 
-                sub_child  = child.nodes[0]
-                if sub_child.name == "SUB_RULE": sub_child = sub_child.nodes[0]
+                # These modifiers ONLY ever operate on a single rule (node) 
+                # at at time, and the operand is stored in child.nodes[0]: 
+                sub_child  = child.nodes[0]     
 
-                foo = None
+                # If the operand is a sub_rule...
+                if sub_child.name == "SUB_RULE": sub_child = sub_child.nodes[0] # This is problematic if sub_child contains multiple rules in a list like ( ',' NAME )
                 
-                name = sub_child.name
-                # Remove double quoting:
-                if len(name) >= 3:
-                    if  name[0] == r"'" and name[-1] == r"'":
-                        name = name[1:-1]
-
-                condition   = predicates[name].split('|') # <-- This needs to support '&' and also '|' and '&' in the same predicate.  
                 suite       = child.nodes[0]    # Maybe make function for parsing predicates, maybe stick those in a data structure instead of string...
 
                 if child.name == '+': # 1 or more of the previous token, so force match 1 time:
                     gen_func_body_statement(suite, tab)
 
-                comp_op = '=='
-                if len(child.nodes) > 1: # Do we have an end condition present in the list from when the rules were built
-                    name = child.nodes[-1].name
-                    if  name[0] == r"'" and name[-1] == r"'": name = name[1:-1]
-                    condition = [predicates[name]]    
-                    comp_op = '!='                
-
-                foo = f"while self.LA(1) {comp_op} self.input.{condition[0]}"
-                if len(condition) > 1 and type(condition) != str: 
-                    for cond in condition[1:]:
-                        foo += f" or self.LA(1) == self.input.{cond}"
-                add_line(foo+':', tab)
+                add_line(
+                    text=self.build_cmpd_stat(sub_child, 'while'),
+                    tab=tab
+                )
 
                 gen_func_body_statement(suite, tab+1)
             
             elif child.name in '|':              # RT.MODIFIER: This OR this OR this
 
-                def build_stat(token, predicates, if_or_elif):
-                    """ Soley used for building if-elif suites.
-                        Also handles using booleans in building the tests: 
-                            
-                            >>> if x or y: pass
-                            >>> if x and y: pass
-                            
-                        """
-
-                    predictor,keyword, op = [], None, None
-                    name = token.name
-                    if len(name) >= 3 and name[0] == r"'" and name[-1] == r"'":
-                        name = name[1:-1]
-
-                    if if_or_elif == 'if':
-                        keyword = 'if'                        
-                        predictor = predicates[name]             
-
-                    if if_or_elif == 'elif':
-                        keyword = 'elif'
-                        predictor = predicates[name]
-
-                    if '&' in predictor:                        #<<<< This also needs to be reworked to support a mix of '|' and '&'
-                        predictor = predictor.split('&')
-                        op = "and"
-
-                    elif '|' in predictor: 
-                        predictor = predictor.split('|')
-                        op = 'or'
-
-                    else: predictor = [predictor]
-
-                    cur_line = f"{keyword} self.LA(1) == self.input.{predictor[0]}"
-                    predictor.pop(0)
-
-                    if op == "or":
-                        # If one of the alternates has multiple predictors, handle them:
-                        for p in predictor:
-                            cur_line += f" {op} self.LA(1) == self.input.{p}"
-
-                    if op == "and":       
-                        i = 2             
-                        # If one of the alternates requires multiple predictors, handle them:
-                        for p in predictor:
-                            cur_line += f" {op} self.LA({i}) == self.input.{p}"
-                            i += 1
-                    
-                    cur_line += ':'
-                    return cur_line
-
                 # The first test will always be an 'if' statment:
-                add_line(build_stat(child.nodes[0], predicates, 'if'), tab)  # Add the test line
+                add_line(
+                    text=self.build_cmpd_stat(child.nodes[0], keyword='if'), 
+                    tab=tab
+                )  # Add the test line
                 gen_func_body_statement(child.nodes[0], tab+1)                # Generate the body 
                 suite = child.nodes[1:]                                      # Remove generated line from list
 
                 # Any subsequent test will be an elif statement: 
                 for node in suite:
-                    add_line(
-                        build_stat(node, predicates, 'elif'), tab)  # Generate test line
+                    add_line(                                       # Generate test line
+                        text=self.build_cmpd_stat(node, keyword='elif'), 
+                        tab=tab
+                    )                                               
                     gen_func_body_statement(node, tab+1)            # Generate the body 
                 
                 if not optional:
@@ -579,7 +595,7 @@ if __name__ == "__main__":
 
     # Write code to file:
     # --------------------------------------------------
-    # with open(outpath, mode='w') as f:
-    #     for line in code: f.write(line+'\n')
+    with open(outpath, mode='w') as f:
+        for line in code: f.write(line+'\n')
 
     #for line in code: print(line)
