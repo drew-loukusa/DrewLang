@@ -6,7 +6,7 @@ statement    : printstat
              | assignstat
              | funcdef
              | funccall
-             | expr
+             | exprstat
              ;
 
 assignstat   : NAME '='  expr ';'                                               ;  
@@ -14,15 +14,17 @@ printstat    : 'print' '(' expr ')' ';'                                         
 ifstat       : 'if' '(' test ')' statement                                      ;
 whilestat    : 'while' '(' test ')' statement                                   ;
 blockstat    : '{' statement *  '}'                                             ;
+exprstat     : expr ';'                                                         ;
 
-expr         : sub_expr ( math_op sub_expr ) *                                  ;
-sub_expr     : NAME | NUMBER | STRING | funccall                                ;
+expr         : term ( add_op term ) *                                           ;
+term         : atom ( mult_op atom ) *                                          ;
+atom         : NAME | NUMBER | STRING | funccall                                ;
 test         : expr cmp_op expr                                                 ;
 
 funcdef      : 'def' NAME parameters statement                                  ;
 funccall     : NAME parameters ';'                                              ;
-parameters   : '(' namelist ? ')'                                               ;
-namelist     : NAME ( ',' NAME ) *                                              ;
+parameters   : '(' exprlist ? ')'                                               ;
+exprlist     : expr ( ',' expr ) *                                              ;
 
 cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
 math_op      : add_op | mult_op                                                 ;
@@ -32,7 +34,7 @@ mult_op      : '*' | '/'                                                        
 # Map rule_name to the token_name that predicts said rule:
 PREDICATES: 
 
-namelist -> NAME&COMMA
+namelist -> NAME
 assignstat -> NAME&EQUALS
 NAME -> NAME
 NUMBER -> NUMBER
@@ -73,7 +75,8 @@ IF                      'if'
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
-NAME                    NON_PRE_DEF     ( 'a' .. 'z' ) | ( 'A' .. 'Z' )
-NUMBER                  NON_PRE_DEF     '0' .. '9' 
-STRING                  NON_PRE_DEF     '"' . * '"'
+NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
+NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
+STRING                  NON_PRE_DEF     '"' . * '"'              
 END 
+                                        

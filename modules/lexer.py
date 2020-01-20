@@ -48,7 +48,7 @@
                 super().__init__(input, token_defs, multi_char_recognizers)        
  """
 
-from parser_generator import GrammarReader, Node
+from parser_generator import GrammarReader, Node, RuleToken
 
 class Token:
     def __init__(self, ttype: int, text: str, tname: str, line_num, char_pos, definition=None):
@@ -104,19 +104,22 @@ class Lexer:
 
         self.multi_char_lexers = []
 
+        # For debug purposes:
+        self.token_list = []
+
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
         # ---------------------------------------------------------------------
         for i, name in enumerate(token_defs, start=2):        
-            text = token_defs[name]
+            defn = token_defs[name]
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
-            if type(text) != Node:          # Add char:token_name pairing to dict 
-                text = text[1:-1]           # Remove quotes to avoid double quoting 
-                self.char_to_ttype[text] = i  
+            if type(defn) != Node:          # Add char:token_name pairing to dict 
+                defn = defn[1:-1]           # Remove quotes to avoid double quoting 
+                self.char_to_ttype[defn] = i  
 
-            # Add all info to multi_char_lexers: TEMP OUT OF ORDER WHILE I WORK ON BELOW ONE
-            if False and len(text) > 1 and type(text) == Node:
+            # Add all info to multi_char_lexers: 
+            if False and type(defn) == Node or (type(defn) != Node and len(defn) > 1):
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
                 multi_char_type = "NON_PRE_DEF"
@@ -139,10 +142,11 @@ class Lexer:
                     end_set   = start_set 
 
 
-                else: # PRE-DEF Token: 
-                    start_set = text[0]
-                    char_set  = text 
+                elif type(defn) != Node: # PRE-DEF Token: 
+                    start_set = defn[0]
+                    char_set  = defn 
                     multi_char_type = "PRE_DEF"
+                    self.keywords[defn] = 1
                 
                 token_name = name                 
 
@@ -150,19 +154,26 @@ class Lexer:
             
             # Generate lexing functions for NON_PRE_DEF tokens like STRING or NAME
             # For those cases, 'text' will be the root of a Node tree 
-            if type(text) == Node or len(text) > 1:
+            # 
+            # NOTE: New code below: Will generate recognizers from Rule ASTs
+            #
+            if (type(defn) == Node or len(defn) > 1):
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
                 multi_char_type = "NON_PRE_DEF"
 
-                if type(text) is str:  # PRE_DEF                    
-                    start_set = text[0]
-                    char_set  = text 
+                if type(defn) is str:  # PRE_DEF                    
+                    start_set = defn[0]
+                    char_set  = defn 
                     multi_char_type = "PRE_DEF"
-                    self.keywords[text] = 1
+                    self.keywords[defn] = 1
 
-                elif type(text) is Node: 
-                    pass
+                elif type(defn) is Node: 
+                    # Compute the start_set for each Non-predefined token:               
+                    start_set = self.compute_char_set(defn.nodes[0])
+                    if len(defn.nodes)==1: pass
+                    char_set = defn 
+                        
                 
                 token_name = name                 
 
@@ -170,6 +181,32 @@ class Lexer:
                                                 char_set, 
                                                 token_name, 
                                                 multi_char_type))
+
+    def compute_char_set(self, defn: Node, ret_set=None) -> set:
+        if ret_set is None: ret_set = set()
+     
+        if defn.type == RuleToken.TERMINAL: return set(self._strip_quotes(defn.name))
+
+        if defn.name == '..': # Range operator:
+            start = self._strip_quotes(defn.nodes[0].name) # Get limits of this range
+            end   = self._strip_quotes(defn.nodes[1].name)
+            
+            # Generate all chars in the range
+            return set( chr(i) for i in range(ord(start), ord(end)+1) )                        
+
+        if defn.type in [RuleToken.MODIFIER, RuleToken.SUB_RULE] or defn.name == "BLANK":
+            for node in defn.nodes:
+                ret_set.update(
+                    self.compute_char_set(node, ret_set=ret_set)
+                ) 
+            return ret_set
+        return ret_set
+
+    def _strip_quotes(self, name):
+        """" Strips single quotes on both sides of a string if present"""
+        if len(name) >= 3 and name[0] == r"'" and name[-1] == r"'":
+            return name[1:-1]
+        return name 
 
     def consume(self):
         """ Increments the char pointer int 'p' by one and sets 
@@ -265,7 +302,7 @@ class Lexer:
             self.consume()      # Consume the comment, 
         self.consume()          # Consume the new line 
 
-    def nextToken(self):
+    def nextToken(self) -> Token:
         """ Returns the next char in the input string. 
             If there is no next char, returns <EOF> (End of File) """
         while self.c != Lexer.EOF: 
@@ -288,12 +325,13 @@ class Lexer:
 
                 # Skip the body unless we have self.c == a start character (or be a member of a given char set)
                 if   multi_char_type == "PRE_DEF"     and self.c != start_set:   continue
-                elif multi_char_type == "NON_PRE_DEF" and type(start_set) != int and not start_set(self.c): continue
+                elif multi_char_type == "NON_PRE_DEF" and type(start_set) == set and self.c in start_set: continue
 
                 multi_char = self.c
                 self.consume()
 
-                if multi_char_type == "PRE_DEF":                                         
+                if multi_char_type == "PRE_DEF":        
+                    char_set = char_set[1:] # Remove first char since it's already in multi_char                                 
                     for i,c in enumerate(char_set, start=1):
                         if self.c != c: break
                         multi_char += c
@@ -314,25 +352,34 @@ class Lexer:
                         self.rewind(i)
                     
                 elif multi_char_type == "NON_PRE_DEF": 
-                    escape_next = False
-                    while char_set(self.c) or escape_next:
-                        if self.c == '\\': 
-                            escape_next = True
+                    def temp_func_name(node, multi_char, chars_consumed=0): 
+                        """ Change name of func to something that makes sense"""
+                        if node.name == '.': # Match any char:
+                            multi_char += self.c 
                             self.consume()
-                        multi_char += self.c
-                        self.consume()
-                        escape_next = False
-                    
-                    # Temporary, see init
-                    if t_name == "STRING": 
-                        multi_char+= self.c; 
-                        self.consume() 
-                        # Check for double quoting, and remove it if found:
-                        if multi_char[0] == '"' and multi_char[-1] == '"' and \
-                            multi_char[1] == "'" and multi_char[-2 == "'"]:
-                            multi_char = multi_char[1:-1]
-                        pass
+                            chars_consumed += 1
+                            return multi_char, chars_consumed
 
+                        if node.name == '*':
+                            char_set = self.compute_char_set(node.nodes[0])
+                            loop = lambda n: n in char_set
+                            if len(node.nodes) == 2:
+                                loop = lambda n: n != node.nodes[1]
+
+                            while loop(self.c):
+                                multi_char += self.c 
+                                self.consume()
+                                chars_consumed += 1
+
+                                # NOTE: RESUME HERE 
+
+                    escape_next = False
+
+                    root = char_set # Root of our lexical rule tree is char_set
+
+                    for node in root.nodes: 
+                        temp_func_name(node)
+                    
                     ttype = getattr(self, t_name)
                     return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
 
@@ -349,7 +396,35 @@ class Lexer:
             raise Exception(f"Invalid character: < {self.c}; ord: {ord(self.c)} > on line {self.line_num}, position {self.char_pos}")
 
         
-        return Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)
+        new_token = Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)
+        return new_token
 
             
-          
+if __name__ == "__main__":
+    input = \
+"""
+x=0;
+print("Hello world");
+if(x >= 0){
+    print("xis0");
+    x=1;
+
+    if ( x == 0 ) print("Fuck yeah");
+}
+"""
+    #lexer = Lexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt" ) 
+    lexer = Lexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt" ) 
+    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    #print("DLexer Class after initialization:")
+    #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")
+
+    t = lexer.nextToken()
+    lexer.token_list.append(t)
+    i = 0
+    while t._type != lexer.EOF_TYPE:
+        print(i, '\t', t)
+        t = lexer.nextToken()
+        lexer.token_list.append(t)
+        i+=1
+    print(t)
+    print()

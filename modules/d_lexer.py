@@ -18,7 +18,8 @@ class DLexer(Lexer):
 
 if __name__ == "__main__":
     input = \
-"""x=0;
+"""
+x=0;
 print("Hello world");
 if(x >= 0){
     print("xis0");
@@ -34,11 +35,14 @@ if(x >= 0){
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")
 
     t = lexer.nextToken()
+    lexer.token_list.append(t)
     i = 0
     while t._type != lexer.EOF_TYPE:
         print(i, '\t', t)
         t = lexer.nextToken()
+        lexer.token_list.append(t)
         i+=1
     print(t)
+    print()
 
 

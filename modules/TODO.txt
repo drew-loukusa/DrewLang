@@ -1,31 +1,7 @@
 TODO: 
 
-*   Work on removing hard coded implemenation details from dlexer.py and lexer.py: 
-        > Currently, to add NEW tokens to support new items in the grammar I have to:
-            > Add the token def to the token_defs.txt file
-            > Add the token name as an int to the dlexer.py file (only for autocomplete tho I think?)
-            > If it's a multichar token, add it to the lexer method in lexer.py
-
-        > I don't like that, it should all be generated from the grammar file.
-
 *   Write tests for parser: Ensure it correctly parses everything in your grammar
     Consider using pytest? Or some other testing framework.
-
-
-*   Bridge the gap between d_lexer.py and parser_generator.py in regards to generating lexer methods from the grammar file.
-    Currently, we load the SOQ and MB funcs from d_lexer. 
-    I'd like it if, as the parser, we read the grammar file, saw the multi-char token defs, and generated funcs to send to 
-    the lexer to initilize it.
-
-    We have funcs in d_lexer currently, and we have the ability to parse the multi-char token defs in the parser_generator.
-    We just have to create a way to generate the functions from the list of nodes that we have. 
-
-   UPDATE:  Progress has been made here, but I think the BEST way to go about this is to instead just send the literal string 
-            of the multi_char token rule def to the lexer, and have IT create it's own function for lexing the rule.
-            
-            We should be able to give "NAME: ( a..z | A..Z )" to the lexer, and have IT generate or configure it's own functions.
-
-            None of this generate a visitor func, that's not necessary. 
 
 *   Generate ALL predicates from the grammar.
     Currently we can generate all prediactes except for ones that use '&' 
@@ -33,39 +9,28 @@ TODO:
     have conflicting start tokens  and which thus require more lookahead to use
     the '&' char. That would make generate predicates very easy for my program.
 
-*   For Nov 22, 2019: 
-        -   Continue to work on gen_parser_test_AST_CODE_EXAMPLE.py:
-            Now that you have added '>=' and others as lexical tokens,
-            (plus changed how you lex multi-char tokens to make it easier to 
-            add multi-char tokens in the future), 
-            your job there should be easier. 
+*   Continue to work on gen_parser_test_AST_CODE_EXAMPLE.py:
+    Now that you have added '>=' and others as lexical tokens,
+    (plus changed how you lex multi-char tokens to make it easier to 
+    add multi-char tokens in the future), 
+    your job there should be easier. 
 
-            Write some TEST code as well, a short little __name__ == "__main__" thingy like the other modules.
+    Write some TEST code as well, a short little __name__ == "__main__" thingy like the other modules.
 
-            Give more thought to implementing the ^ operator for denoting ROOT of AST 
-            (for multiple options for root, use ^ ( a | b | c )) 
+    Give more thought to implementing the ^ operator for denoting ROOT of AST 
+    (for multiple options for root, use ^ ( a | b | c )) 
+
+*   GrammarReader is now its own class, and Rule AST trees get passed to the lexer for 
+    non-pre-defined tokens. The next step is to generate recognizers for said tokens
+    based on the Rule AST trees for each given token.
 
 
-                             
-            This right here. |
-                             |   
-                             |
-                             V 
-        -   Think about making the grammar rule processing from parser_gen it's own module
-            This would allow you to import it into lexer, which it could use to get a Node 
-            based data structure of the NAME, NUMBER and STRING rules.
+*   Re-factor grammar to support operator (mathmatical) precedence. See python grammar for example.
+    Add rules like: Factor, term, primary
 
-VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+    DONE. Basic support is there. No support yet for exponets (aka using ** ) but that can come later. 
 
-    *   Re-factor grammar to support operator precedence. See python grammar for example.
-        Add rules like: Factor, term, primary
+*   Add support for exponets in expressions
         
-
-Just noting what I'm working on right now:
-
-Fixing build_stat to work with predicates that use both '|' and '&' as expr does.
-At the same time, you'll have to FIX where you deal with '*' to handle that as well, it does not account for that.
-
-Want to add more rules to grammar to support mathmatical precidence. 
 
 * Test that the parser correctly tells you where syntax errors are occuring (line number and char position)

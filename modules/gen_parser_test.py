@@ -3,7 +3,8 @@ import time
 
 class Parser:
     def __init__(self, input, k):
-        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
+        #self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
+        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt") 
         self.k = k      # How many lookahead tokens
         self.p = 0      # Circular index of next token positon to fill
         self.lookahead = [] # Circular lookahead buffer 
@@ -14,8 +15,7 @@ class Parser:
         self.lookahead[self.p] = self.input.nextToken()
         self.p = (self.p+1) % self.k 
 
-    def LT(self, i): 
-        #print("Hey", i)
+    def LT(self, i):         
         return self.lookahead[(self.p + i - 1) % self.k] # Circular fetch
     def LA(self, i): return self.LT(i)._type 
 
@@ -52,11 +52,11 @@ class Parser:
         elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.funccall()
         elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.expr()
+            self.exprstat()
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
     def assignstat(self):
-        self.NAME()
+        self.match(self.input.NAME)
         self.match('=')
         self.expr()
         self.match(';')
@@ -84,23 +84,33 @@ class Parser:
     
     def blockstat(self):
         self.match('{')
-        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+        while self.LA(1) != self.input.RCURBRACK:
             self.statement()
         self.match('}')
     
-    def expr(self):
-        self.sub_expr()
-        while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH or self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
-            self.math_op()
-            self.sub_expr()
+    def exprstat(self):
+        self.expr()
+        self.match(';')
     
-    def sub_expr(self):
+    def expr(self):
+        self.term()
+        while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
+            self.add_op()
+            self.term()
+    
+    def term(self):
+        self.atom()
+        while self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
+            self.mult_op()
+            self.atom()
+    
+    def atom(self):
         if self.LA(1) == self.input.NAME:
-            self.NAME()
+            self.match(self.input.NAME)
         elif self.LA(1) == self.input.NUMBER:
-            self.NUMBER()
+            self.match(self.input.NUMBER)
         elif self.LA(1) == self.input.STRING:
-            self.STRING()
+            self.match(self.input.STRING)
         elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.funccall()
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
@@ -112,26 +122,26 @@ class Parser:
     
     def funcdef(self):
         self.match('def')
-        self.NAME()
+        self.match(self.input.NAME)
         self.parameters()
         self.statement()
     
     def funccall(self):
-        self.NAME()
+        self.match(self.input.NAME)
         self.parameters()
         self.match(';')
     
     def parameters(self):
         self.match('(')
-        if  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.COMMA) :
-            self.namelist()
+        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+            self.exprlist()
         self.match(')')
     
-    def namelist(self):
-        self.NAME()
+    def exprlist(self):
+        self.expr()
         while self.LA(1) == self.input.COMMA:
             self.match(',')
-            self.NAME()
+            self.expr()
     
     def cmp_op(self):
         if self.LA(1) == self.input.DEQUALS:
@@ -175,6 +185,7 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
+    x*5+4*2;
 }
 """
     drewparser = Parser(input, 2)

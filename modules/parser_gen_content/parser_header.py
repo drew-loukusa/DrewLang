@@ -3,7 +3,8 @@ import time
 
 class Parser:
     def __init__(self, input, k):
-        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
+        #self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
+        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt") 
         self.k = k      # How many lookahead tokens
         self.p = 0      # Circular index of next token positon to fill
         self.lookahead = [] # Circular lookahead buffer 
@@ -14,8 +15,7 @@ class Parser:
         self.lookahead[self.p] = self.input.nextToken()
         self.p = (self.p+1) % self.k 
 
-    def LT(self, i): 
-        #print("Hey", i)
+    def LT(self, i):         
         return self.lookahead[(self.p + i - 1) % self.k] # Circular fetch
     def LA(self, i): return self.LT(i)._type 
 
