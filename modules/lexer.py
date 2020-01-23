@@ -187,6 +187,8 @@ class Lexer:
      
         if defn.type == RuleToken.TERMINAL: return set(self._strip_quotes(defn.name))
 
+        if defn.name == '.': return set('.')
+
         if defn.name == '..': # Range operator:
             start = self._strip_quotes(defn.nodes[0].name) # Get limits of this range
             end   = self._strip_quotes(defn.nodes[1].name)
@@ -325,13 +327,12 @@ class Lexer:
 
                 # Skip the body unless we have self.c == a start character (or be a member of a given char set)
                 if   multi_char_type == "PRE_DEF"     and self.c != start_set:   continue
-                elif multi_char_type == "NON_PRE_DEF" and type(start_set) == set and self.c in start_set: continue
+                elif multi_char_type == "NON_PRE_DEF" and type(start_set) == set and self.c not in start_set: 
+                    continue
+                
+                multi_char = ""
 
-                multi_char = self.c
-                self.consume()
-
-                if multi_char_type == "PRE_DEF":        
-                    char_set = char_set[1:] # Remove first char since it's already in multi_char                                 
+                if multi_char_type == "PRE_DEF":  
                     for i,c in enumerate(char_set, start=1):
                         if self.c != c: break
                         multi_char += c
@@ -352,33 +353,72 @@ class Lexer:
                         self.rewind(i)
                     
                 elif multi_char_type == "NON_PRE_DEF": 
-                    def temp_func_name(node, multi_char, chars_consumed=0): 
-                        """ Change name of func to something that makes sense"""
-                        if node.name == '.': # Match any char:
+                    def rec_multi_lex(node, multi_char="", chars_consumed=0): 
+                        """Returns lexical token type as  and the token itself as a string"""
+
+                        # Non Terminal Rules:
+                        # -----------------------------------------------------
+
+                        # Match X or Y:
+                        if node.name == '|': 
+                            left_node = node.nodes[0]
+                            right_node = node.nodes[1]
+                            multi_char, chars_consumed = rec_multi_lex(left_node, multi_char, chars_consumed)
+                            multi_char, chars_consumed = rec_multi_lex(right_node, multi_char, chars_consumed)
+                            return multi_char, chars_consumed
+
+                        if node.name == '..': # Match a range of chars
+                            range_start = self._strip_quotes(node.nodes[0].name)
+                            range_end   = self._strip_quotes(node.nodes[1].name)
+                            if self.c >= range_start and self.c <= range_end:
+                                multi_char += self.c
+                                self.consume()
+                                chars_consumed += 1
+                                return multi_char, chars_consumed 
+
+                        elif node.name == '*':
+                            char_set = self.compute_char_set(node.nodes[0])
+                            loop = lambda n: n in char_set
+
+                            if len(node.nodes) == 2:
+                                loop = lambda n: n != self._strip_quotes(node.nodes[1].name)
+
+                            while loop(self.c):
+                                child = node.nodes[0]
+                                multi_char, chars_consumed = rec_multi_lex(child, multi_char, chars_consumed)
+
+                            return multi_char, chars_consumed
+                        
+                        # Terminal Rules:
+                        # -----------------------------------------------------
+                        elif node.name == '.': # Match any char:
                             multi_char += self.c 
                             self.consume()
                             chars_consumed += 1
                             return multi_char, chars_consumed
 
-                        if node.name == '*':
-                            char_set = self.compute_char_set(node.nodes[0])
-                            loop = lambda n: n in char_set
-                            if len(node.nodes) == 2:
-                                loop = lambda n: n != node.nodes[1]
+                        # Is a literal character 
+                        elif self.c == self._strip_quotes(node.name):
+                            multi_char += self.c
+                            self.consume()
+                            chars_consumed += 1
+                            return multi_char, chars_consumed
 
-                            while loop(self.c):
-                                multi_char += self.c 
-                                self.consume()
-                                chars_consumed += 1
-
-                                # NOTE: RESUME HERE 
+                        else: 
+                            message = f"Error while lexing a multi char token. Token: {multi_char} Issue char: {self.c}"
+                            raise Exception(message)
+                        
+                        # NOTE: you must assign values to the below return vals
+                        return multi_char, chars_consumed
 
                     escape_next = False
 
                     root = char_set # Root of our lexical rule tree is char_set
 
-                    for node in root.nodes: 
-                        temp_func_name(node)
+                    multi_char = ""
+                    chars_consumed = 0
+                    for node in root.nodes:                         
+                        multi_char, chars_consumed = rec_multi_lex(node, multi_char, chars_consumed)
                     
                     ttype = getattr(self, t_name)
                     return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
@@ -409,11 +449,13 @@ if(x >= 0){
     print("xis0");
     x=1;
 
-    if ( x == 0 ) print("Fuck yeah");
+    if ( x == 0 ) print("Aww yeah");
 }
 """
-    #lexer = Lexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt" ) 
-    lexer = Lexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt" ) 
+    import os; cwd = os.getcwd()
+
+    #lexer = Lexer(input, cwd + "\\grammar_grammar.txt" ) 
+    lexer = Lexer(input, cwd + "\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")
