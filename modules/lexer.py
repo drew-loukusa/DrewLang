@@ -118,45 +118,8 @@ class Lexer:
                 defn = defn[1:-1]           # Remove quotes to avoid double quoting 
                 self.char_to_ttype[defn] = i  
 
-            # Add all info to multi_char_lexers: 
-            if False and type(defn) == Node or (type(defn) != Node and len(defn) > 1):
-                start_set = 0 # some range (same as char_set for NPD)
-                char_set  = 0 
-                multi_char_type = "NON_PRE_DEF"
-                
-                # TEMPORARY Until I implement a way to generate these from the grammar file:
-                # ---------------------------------------------------------------------
-                if name == "NAME": 
-                    start_set = lambda c: (c>= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
-                    char_set  = start_set
-
-                if name == "NUMBER":
-                    start_set = lambda c: c >= '0' and c <= '9'
-                    char_set = start_set
-                
-                if name == "STRING":
-                    start_set = lambda c: c == '"'  # For DrewLang 
-                    #start_set = lambda c: c == "'" # For grammar grammar 
-                    char_set  = lambda c: c != '"'  # Want to make BOTH work at some point
-                    #char_set  = lambda c: c != "'" # But only accept one type at a time. 
-                    end_set   = start_set 
-
-
-                elif type(defn) != Node: # PRE-DEF Token: 
-                    start_set = defn[0]
-                    char_set  = defn 
-                    multi_char_type = "PRE_DEF"
-                    self.keywords[defn] = 1
-                
-                token_name = name                 
-
-                self.multi_char_lexers.append((start_set, char_set, token_name, multi_char_type))
-            
-            # Generate lexing functions for NON_PRE_DEF tokens like STRING or NAME
+            # Generate lexing info sets for NON_PRE_DEF tokens like STRING or NAME
             # For those cases, 'text' will be the root of a Node tree 
-            # 
-            # NOTE: New code below: Will generate recognizers from Rule ASTs
-            #
             if (type(defn) == Node or len(defn) > 1):
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
@@ -301,8 +264,7 @@ class Lexer:
     def _comment(self):
         """ Skips comments, lines that start with a '#', by consuming chars until a new line is encountered. """
         while self.c != '\n': 
-            self.consume()      # Consume the comment, 
-        self.consume()          # Consume the new line 
+            self.consume()      # Consume the comment,         
 
     def nextToken(self) -> Token:
         """ Returns the next char in the input string. 
@@ -316,7 +278,9 @@ class Lexer:
             
             # Skip comments: 
             # ---------------------------------------
-            if self.c == '#': self._comment()
+            if self.c == '#': 
+                self._comment()
+                continue
               
             # Handle any multi-character token, and some single char tokens:
             # -----------------------------------------------------------------
@@ -391,24 +355,23 @@ class Lexer:
                         
                         # Terminal Rules:
                         # -----------------------------------------------------
-                        elif node.name == '.': # Match any char:
+                        # Match any char:
+                        elif node.name == '.': 
                             multi_char += self.c 
                             self.consume()
                             chars_consumed += 1
                             return multi_char, chars_consumed
 
-                        # Is a literal character 
+                        # Match a literal character: 
                         elif self.c == self._strip_quotes(node.name):
                             multi_char += self.c
                             self.consume()
                             chars_consumed += 1
                             return multi_char, chars_consumed
-
-                        else: 
-                            message = f"Error while lexing a multi char token. Token: {multi_char} Issue char: {self.c}"
-                            raise Exception(message)
                         
-                        # NOTE: you must assign values to the below return vals
+                        else:
+                            return None, chars_consumed
+
                         return multi_char, chars_consumed
 
                     escape_next = False
@@ -419,9 +382,12 @@ class Lexer:
                     chars_consumed = 0
                     for node in root.nodes:                         
                         multi_char, chars_consumed = rec_multi_lex(node, multi_char, chars_consumed)
-                    
-                    ttype = getattr(self, t_name)
-                    return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
+                        if multi_char is None: 
+                            self.rewind(chars_consumed)
+                            break
+                    else:                    
+                        ttype = getattr(self, t_name)
+                        return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos )
 
             # Handle single character tokens:
             # ----------------------------------------
@@ -445,11 +411,13 @@ if __name__ == "__main__":
 """
 x=0;
 print("Hello world");
-if(x >= 0){
+if(x >= 120){
     print("xis0");
     x=1;
 
-    if ( x == 0 ) print("Aww yeah");
+#cmt
+
+    if ( x == 0 ) print("Aww yeah");    
 }
 """
     import os; cwd = os.getcwd()
