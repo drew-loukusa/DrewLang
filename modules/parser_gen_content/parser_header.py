@@ -1,10 +1,9 @@
 from d_lexer import DLexer
 import time
 
-class Parser:
-    def __init__(self, input, k):
-        #self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
-        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt") 
+class Parser:    
+    def __init__(self, input, k, path_to_grammar_file):
+        self.input = DLexer(input, path_to_grammar_file)         
         self.k = k      # How many lookahead tokens
         self.p = 0      # Circular index of next token positon to fill
         self.lookahead = [] # Circular lookahead buffer 

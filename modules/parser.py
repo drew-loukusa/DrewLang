@@ -1,3 +1,9 @@
+""" 
+    A hand written parser for DrewLang.
+    Probably outdated at this  point. 
+
+"""
+
 from d_lexer import DLexer
 import time
 # NOTE: I think there's probably a way to generate this recursive decent parser from the grammar file, 

@@ -1,4 +1,4 @@
-program      : statement * end!=EOF_TYPE ;
+program      : statement *  ;
 statement    : printstat           
              | blockstat   
              | ifstat      
@@ -12,19 +12,19 @@ assignstat   : NAME '=' ( expr | funccall ) ';'                              ;  
 printstat    : 'print' '(' expr ')' ';'                                      ;  ^( 'print' expr )
 ifstat       : 'if' '(' test ')' statement                                   ;  ^( 'if' test statement )
 whilestat    : 'while' '(' test ')' statement                                ;  ^( 'while' test statement )
-blockstat    : '{' statement * end!=RCURBRACK '}'                            ;  ^( statement ) 
+blockstat    : '{' statement * '}'                                           ;  ^( statement ) 
 
-expr         : ( NAME | NUMBER | STRING )  ( add_op expr ) * end==PLUS,DASH  ;  ^(  )
+expr         : ( NAME | NUMBER | STRING )  ( add_op expr ) *                 ;  ^(  )
 test         : expr cmp_op expr                                              ;
 
 funcdef      : 'def' NAME parameters statement                               ;  ^( 'def' NAME parameters statement )
 funccall     : NAME parameters ';'                                           ;  ^( NAME parameters )
-parameters   : '(' NAME * end==NAME ( ',' NAME ) * end==COMMA ')'            ;  ^( $params NAME * )
+parameters   : '(' NAME * ( ',' NAME ) * ')'                                 ;  ^( $params NAME * )
                                                                                 # $ is for artificial node 
-STRING       : '"' . * end!=" '"'                                            ;  uhhh
-NAME         : ( 'a'..'z' | 'A'..'Z' )                                       ;  uhh                
-NUMBER       : ('0'..'9')                                                    ;  uh
-cmp_op       : DEQUALS | GE | LE | '>' | '<'                                 ;  ^( root is anything )
+STRING       : '"' . * end!=" '"'                                            ;  Complete lexical token, returned as node
+NAME         : ( 'a'..'z' | 'A'..'Z' )                                       ;  Same as string                
+NUMBER       : ('0'..'9')                                                    ;  Same as string
+cmp_op       : DEQUALS | GE | LE | '>' | '<'                                 ;  ^( DEQUALS | GE | LE | '>' | '<' )
 add_op       :  '+' | '-'                                                    ;  ^( root is anything )
 mult_op      : '*'  | '/'                                                    ;  ^( root is anything )
     

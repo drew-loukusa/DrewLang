@@ -1,4 +1,5 @@
 if __name__ == "__main__":
+    import os 
     import sys
     input = \
 """x=0;
@@ -9,5 +10,8 @@ if(x==0){
     x=1;
 }
 """
-    drewparser = Parser(input, 2)
+
+    cwd = os.getcwd() 
+    #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
+    drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
     drewparser.program()

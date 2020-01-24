@@ -1,10 +1,9 @@
 from d_lexer import DLexer
 import time
 
-class Parser:
-    def __init__(self, input, k):
-        #self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt") 
-        self.input = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt") 
+class Parser:    
+    def __init__(self, input, k, path_to_grammar_file):
+        self.input = DLexer(input, path_to_grammar_file)         
         self.k = k      # How many lookahead tokens
         self.p = 0      # Circular index of next token positon to fill
         self.lookahead = [] # Circular lookahead buffer 
@@ -156,13 +155,6 @@ class Parser:
             self.match('<')
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
     
-    def math_op(self):
-        if self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
-            self.add_op()
-        elif self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
-            self.mult_op()
-        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
-    
     def add_op(self):
         if self.LA(1) == self.input.PLUS:
             self.match('+')
@@ -177,6 +169,7 @@ class Parser:
             self.match('/')
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
 if __name__ == "__main__":
+    import os 
     import sys
     input = \
 """x=0;
@@ -185,8 +178,10 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
-    x*5+4*2;
 }
 """
-    drewparser = Parser(input, 2)
+
+    cwd = os.getcwd() 
+    #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
+    drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
     drewparser.program()

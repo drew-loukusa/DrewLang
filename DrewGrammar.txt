@@ -27,7 +27,6 @@ parameters   : '(' exprlist ? ')'                                               
 exprlist     : expr ( ',' expr ) *                                              ;
 
 cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
-math_op      : add_op | mult_op                                                 ;
 add_op       : '+' | '-'                                                        ;
 mult_op      : '*' | '/'                                                        ;
 

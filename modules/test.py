@@ -23,7 +23,7 @@ import sys
 #     t = lexer.nextToken()
 # print(t)
 
-#Sprint("--------------------------\n", lexer.__dict__)
+#print("--------------------------\n", lexer.__dict__)
 #print(lexer.__getattribute__("NAME"))
 
 # from parser import Parser

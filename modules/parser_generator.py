@@ -444,6 +444,15 @@ class ParserGenerator( GrammarReader ):
         name = self._strip_quotes(token.name)                
         predictor = self.predicates[name]         
 
+        """ 
+        'predictor' is an auto-generated string which describes the lookahead "set" of given rule.
+        'predictor might look like:
+               
+         NAME|STRING&NUMBER|NUMBER
+         So the lookahead set here is NAME or STRING + NUMBER or just NUMBER.
+        """
+
+        # Parse the lookahead set-string:
         preds = []
         for p in predictor.split('|'):                            
             if '&' in p:                        
@@ -487,7 +496,7 @@ class ParserGenerator( GrammarReader ):
             """ Accepts a node, 'child', and generates the appropriate python statement, 
                 or suite of statements based on what RuleToken type the node is. 
             """
-            if child.type in [RT.TERMINAL, RT.NON_TERMINAL]:           
+            if child.type in [RT.TERMINAL, RT.NON_TERMINAL]:                           
                 ltab = tab 
                 if optional:                     
                     self.add_line(
@@ -495,6 +504,20 @@ class ParserGenerator( GrammarReader ):
                         ltab
                     )
                     ltab += 1
+
+                """ 
+                NOTE: I think right here (RT.TERMINAL below) is where MOST of the work will happen for AST stuff.
+
+                Provided an appropriate data structure is created and then available at this point in the process,
+                then you should be able to check that data structure for what this sub-rule should be; a root node,
+                a child node, or not a node at all (ignored). 
+
+                Then, you can add the appropriate AST NODE code prefix to the "self.match()" or "self.RULE()" call.
+
+                Then outside of this func, you can add the general statements that appear in each func,
+                and also var initilizations as needed according to the AST rule data structure
+                
+                """
 
                 if child.type == RT.TERMINAL:
                     match_text = child.name
@@ -514,9 +537,10 @@ class ParserGenerator( GrammarReader ):
                 end_conditon = None if len(child.nodes) < 2 else child.nodes[1]
 
                 # If the operand is a sub_rule...
-                if sub_child.name == "SUB_RULE": sub_child = sub_child.nodes[0] # This is problematic if sub_child contains multiple rules in a list like ( ',' NAME )
+                if sub_child.name == "SUB_RULE": 
+                    sub_child = sub_child.nodes[0] # This is problematic if sub_child contains multiple rules in a list like ( ',' NAME )
                 
-                suite       = child.nodes[0]    # Maybe make function for parsing predicates, maybe stick those in a data structure instead of string...
+                suite       = child.nodes[0] 
 
                 if child.name == '+': # 1 or more of the previous token, so force match 1 time:
                     gen_func_body_statement(suite, tab)
@@ -569,11 +593,6 @@ class ParserGenerator( GrammarReader ):
             # Generate the function name:
             self.add_line(f"def {rule.name}(self):", tab); tab += 1
 
-            # Temporary while I better integrate my grammar and token_defs
-            if rule.name in ["NAME", "NUMBER", "STRING", "TERMINAL"]: 
-                self.add_line(f"self.match(self.input.{rule.name})", tab)  
-                continue
-
             # Generate the function body for a rules function.
             for child in rule.nodes:
                 gen_func_body_statement(child, tab)
@@ -583,24 +602,21 @@ class ParserGenerator( GrammarReader ):
 
 if __name__ == "__main__":
     import sys
+    cwd = os.getcwd()  
     
-    path = os.getcwd() 
-    
-    print("CWD:", path, file=sys.stderr)
-    
-    grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt"
-    #grammar_file = "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt"
+    grammar_file =  cwd + "\\DrewGrammar.txt"
+    #grammar_file = cwd + "\\grammar_grammar.txt"
     g = ParserGenerator(grammar_file)
 
     g.dump(dump_rules=True, dump_predicates=True)
    
-    header = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_header.py")]
-    footer = [line.rstrip('\n') for line in open(path+"\\modules\\parser_gen_content\\parser_footer.py")]
+    header = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_header.py")]
+    footer = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_footer.py")]
     
     code = g.generate_source_text(header, footer)
 
-    outpath = path+"\\modules\\gen_parser_test.py"
-    #outpath = path + "\\modules\\grammar_parser.py" 
+    outpath = cwd+"\\modules\\gen_parser_test.py"
+    #outpath = cwd + "\\modules\\grammar_parser.py" 
 
     # Write code to file:
     # --------------------------------------------------
