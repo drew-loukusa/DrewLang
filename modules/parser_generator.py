@@ -15,23 +15,19 @@ class RuleToken:
     TERMINAL = 2
     MODIFIER = 3
     MODIFIER_INFO = 4
-    SUB_RULE = 5
+    LPAREN = 5
+    RPAREN = 6
+    SUB_RULE = 7
 
-    type_names = ["RULE_NAME","NON_TERMINAL","TERMINAL","MODIFIER","MODIFIER_INFO","SUB_RULE"]
+    type_names = [  "RULE_NAME","NON_TERMINAL","TERMINAL","MODIFIER",
+                    "MODIFIER_INFO", "LPAREN", "RPAREN", "SUB_RULE"]
 
     def __init__(self, rule_token_type, text):
         self.type = rule_token_type
         self.text = text 
-        self.sub_list = []
 
     def __str__(self):
-        if len(self.sub_list) > 0:
-            rep = f"<{self.type_names[self.type]}; ["
-            for token in self.sub_list:
-                rep+= f"{token}, "
-            rep += "]>"
-            return rep
-        return f'<{self.type_names[self.type]}; "{self.text}">'
+       return f'<{self.type_names[self.type]}; "{self.text}">'
 
 class Node:
     def __init__(self, name, ntype):
@@ -193,7 +189,8 @@ class GrammarReader:
         last_was_infix      = False       
         last_was_star       = False 
 
-        for rule_token in rule_list:
+        while len(rule_list) > 0:        
+            rule_token = rule_list.pop(0)
             child = None
 
             if rule_token.type == RuleToken.NON_TERMINAL:                 
@@ -240,14 +237,16 @@ class GrammarReader:
                     last_was_prefix = True
                     child = Node(name=rule_token.text, ntype=rule_token.type)      
 
-            elif rule_token.type == RuleToken.SUB_RULE:
-                child = Node(name="SUB_RULE", ntype=rule_token.type)       
-                self._build_definition(child, rule_token.sub_list)
+            elif rule_token.type == RuleToken.LPAREN:
+                child = Node(name="SUB_RULE", ntype=RuleToken.SUB_RULE)       
+                self._build_definition(child, rule_list)
                 
                 # Make the modifier node the child instead of SUB_RULE, since 
                 # modifiers only ever serve as root nodes for a tree:
                 if child.nodes[0].type == RuleToken.MODIFIER:
                     child = child.nodes[0] 
+
+            elif rule_token.type == RuleToken.RPAREN: return
 
             # Assign infix and prefix modfier nodes their right child node:
             # -----------------------------------------------------------------
@@ -273,12 +272,12 @@ class GrammarReader:
                 rule.nodes.append(prev_node)
 
             # Add child to the rules nodes (list):
-            rule.nodes.append(child)            
+            rule.nodes.append(child)                        
             #print(f"Adding {child} to rule def...")
 
     def _process_rule(self, tokens, mode='rule'):
         """ From a list of text-tokens, make and return a list of rule-tokens.
-            Rule token types: rule_name, non_terminal, terminal, modifier, sub_rule
+            Rule token types: rule_name, non_terminal, terminal, modifier
         """
 
         rule_tokens = []
@@ -289,59 +288,32 @@ class GrammarReader:
             tokens.pop(0)
             tokens.pop(0)
 
-        def create_rule_token(lexical_token):
+        for lexical_token in tokens:            
+            if lexical_token == ';': 
+                break # ';' signifies the end of the rule
+            
+            token_type = None
             # Process terminal symbols: Predefined and Non-pre-defined            
             if lexical_token[0] == "'" or lexical_token.isupper():  
-                return RuleToken(RuleToken.TERMINAL,lexical_token)
+                token_type = RuleToken.TERMINAL
+
+            # Process Parens:
+            elif lexical_token == '(': token_type = RuleToken.LPAREN            
+            elif lexical_token == ')': token_type = RuleToken.RPAREN
             
             # Process modifier lexical_token:
             elif lexical_token in self.modifiers: 
-                return RuleToken(RuleToken.MODIFIER,lexical_token)
+                token_type = RuleToken.MODIFIER
 
             # Process modifer info lexical_token;
             elif len(lexical_token) >= 3 and lexical_token[0:3] == 'end':
-                                    return RuleToken(RuleToken.MODIFIER_INFO, lexical_token)
-            else:                   return RuleToken(RuleToken.NON_TERMINAL, lexical_token)
+                token_type =RuleToken.MODIFIER_INFO
+            else:                   
+                token_type = RuleToken.NON_TERMINAL
 
+            rule_token = RuleToken(token_type, lexical_token)
+            rule_tokens.append(rule_token)
 
-        i = 0
-        while i < len(tokens):
-            lexical_token = tokens[i]
-            if lexical_token == ';': break # ';' signifies the end of the rule
-        
-            # I think that this is unecessary or does not belong here:
-            # I should simply be identifyfing parens as tokens, and build_rule() should handle constructing
-            # the recursive sub-rules. 
-
-            # I think nesting the sub-rule tokens at this point is pre-mature. Consider moving this logic
-            # out of this into build_rule()
-
-            def process_sub_rule(lexical_token, i):
-                k = i; i += 1; lexical_token = tokens[i]
-
-                rule = RuleToken(RuleToken.SUB_RULE,'SUB_RULE')                
-                while lexical_token != ')':
-                    if lexical_token == '(': 
-                        # Recursively handle sub-sub rules:
-                        n, sub_rule = process_sub_rule(lexical_token, i)
-                        rule.sub_list.append(sub_rule)
-                        i += n
-                    else:
-                        rule.sub_list.append(create_rule_token(lexical_token))
-                        i += 1
-                    lexical_token = tokens[i]
-                i += 1               
-                return (i - k), rule # Return how many tokens were processed, and the rule
-
-            # Process sub_rules:
-            if lexical_token == '(': 
-                n, sub_rule = process_sub_rule(lexical_token, i)
-                rule_tokens.append(sub_rule)
-                i += n
-            else: 
-                rule_tokens.append(create_rule_token(lexical_token))
-                i += 1
-                
         return rule_tokens
 
     def _read_rules_and_predicates(self, grammar_file_path):
