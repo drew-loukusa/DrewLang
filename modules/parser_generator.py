@@ -81,6 +81,12 @@ class GrammarReader:
         self.rule_tokens = []   # List of RuleToken lists
         self.predicates = {}    # Dict of rule_name -> what token predicts said rule
 
+        self.prefix_mods   = ['^', '~']
+        self.infix_mods    = ['|', '..']
+        self.postfix_mods  = ['*', '?', '+']
+
+        self.modifiers = self.prefix_mods + self.infix_mods + self.postfix_mods 
+
         if mode == 'rule':
             self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
             self._build_rules() # Fills self.rules        
@@ -174,22 +180,19 @@ class GrammarReader:
         #print("Top of build_def():")
         #print(f"Current rule: {rule}")
 
-        def get_last_node():
-            last = rule.nodes.pop()
-            if last.name == "SUB_RULE" and last.nodes[0].type == RuleToken.MODIFIER:
-                last = last.nodes[0]
-            return last
+        def get_prev_node():
+            return  rule.nodes.pop()            
 
         def find_next_valid_token(node):
-            if node.name in ['|','*','+','~', '?',"SUB_RULE"]:
+            if node.name in self.modifiers + ["SUB_RULE"]:
                 node = find_next_valid_token(node.nodes[0])    
             return node 
 
-        last = None
-        last_was_or_node = False
-        last_was_not = False
-        last_was_star = False
-        last_was_range = False
+        prev_node = None
+        last_was_prefix     = False
+        last_was_infix      = False       
+        last_was_star       = False 
+
         for rule_token in rule_list:
             child = None
 
@@ -200,31 +203,42 @@ class GrammarReader:
                 child = Node(name=rule_token.text, ntype=rule_token.type)
 
             elif rule_token.type == RuleToken.MODIFIER: 
-                #We need to grab the last node since it is being modified
-                if rule_token.text in ['*', '+', '?']:
-                    if rule_token.text == '*': last_was_star = True
-                    last = get_last_node()
-                    child = Node(name=rule_token.text, ntype=rule_token.type)
-                    child.nodes.append(last)
 
-                if rule_token.text == '|': 
-                    last_was_or_node = True
+                # Create infix and postfix modifer nodes, 
+                # and then give them their left child node:
+                # -------------------------------------------------------------
+
+                """ Take the most recent previous created node since it is being 
+                    "modified" by the current modifier node """
+                
+                # Postfix
+                if rule_token.text in self.postfix_mods:
                     
-                    if rule.nodes[-1].name == '|': continue
+                    # Flag for handling optional end conditions:
+                    if rule_token.text == '*': 
+                        last_was_star = True
+
+                    prev_node = get_prev_node()
+                    child = Node(name=rule_token.text, ntype=rule_token.type)
+                    child.nodes.append(prev_node)
+
+                # Infix:
+                if rule_token.text in self.infix_mods: 
+                    last_was_infix = True
                     
-                    last = get_last_node()
+                    # Handle succesive ORs in a row: Skip making a new node, 
+                    # And put all or-ed items into a single child list                    
+                    if rule_token.text == '|' and rule.nodes[-1].name == '|': continue
+                    
+                    prev_node = get_prev_node()
                     child = Node(name=rule_token.text, ntype=rule_token.type)
-                    child.nodes.append(last)
+                    child.nodes.append(prev_node)
 
-                if rule_token.text == '..':
-                    last_was_range = True 
-                    last = get_last_node()
-                    child = Node(name=rule_token.text, ntype=rule_token.type)
-                    child.nodes.append(last)
-
-                if rule_token.text == '~':
-                    last_was_not = True
-                    child = Node(name=rule_token.text, ntype=rule_token.type)              
+                # Create prefix operator nodes:               
+                # -------------------------------------------------------------
+                if rule_token.text in self.prefix_mods:
+                    last_was_prefix = True
+                    child = Node(name=rule_token.text, ntype=rule_token.type)      
 
             elif rule_token.type == RuleToken.SUB_RULE:
                 child = Node(name="SUB_RULE", ntype=rule_token.type)       
@@ -235,30 +249,32 @@ class GrammarReader:
                 if child.nodes[0].type == RuleToken.MODIFIER:
                     child = child.nodes[0] 
 
-            # If the last node was an 'or node', then we need 
-            # to put the current node as the 'or' node's right child:
-            if (last_was_or_node or last_was_not or last_was_range) and rule_token.type != RuleToken.MODIFIER:                 
-                last = get_last_node()
-                last.nodes.append(child)
+            # Assign infix and prefix modfier nodes their right child node:
+            # -----------------------------------------------------------------
+            # Add the current node to the previous nodes child list:
+            if (last_was_infix or last_was_prefix) and rule_token.type != RuleToken.MODIFIER:                 
+                prev_node = get_prev_node()
+                prev_node.nodes.append(child)
 
-                last_was_or_node = False
-                last_was_not = False
-                last_was_range = False
+                last_was_infix = False
+                last_was_prefix = False
 
-                child = last
+                child = prev_node
 
+            # Handle optional end conditons for '*' operator:
+            # -----------------------------------------------------------------
             # IF a token follows after a '*' operator, that token can be used
             # as the end condition for the while loop of the token preceding the '*'.
-            # Example: . * 'b' -> means match any char as long it's not 'b'.        
+            # Example: . * 'b' -> means continue to match any char as long it's not 'b'.        
             if last_was_star and rule_token.type != RuleToken.MODIFIER:
-                last = get_last_node()
-                last.nodes.append(find_next_valid_token(child))
+                prev_node = get_prev_node()
+                prev_node.nodes.append(find_next_valid_token(child))
                 last_was_star = False
-                rule.nodes.append(last)
+                rule.nodes.append(prev_node)
 
             # Add child to the rules nodes (list):
-            #print(f"Adding {child} to rule def...")
             rule.nodes.append(child)            
+            #print(f"Adding {child} to rule def...")
 
     def _process_rule(self, tokens, mode='rule'):
         """ From a list of text-tokens, make and return a list of rule-tokens.
@@ -273,59 +289,69 @@ class GrammarReader:
             tokens.pop(0)
             tokens.pop(0)
 
-        def rules(lexical_token):
+        def create_rule_token(lexical_token):
             # Process terminal symbols: Predefined and Non-pre-defined            
             if lexical_token[0] == "'" or lexical_token.isupper():  
                 return RuleToken(RuleToken.TERMINAL,lexical_token)
             
             # Process modifier lexical_token:
-            elif lexical_token in list('*+?|~')+['..']: return RuleToken(RuleToken.MODIFIER,lexical_token)
+            elif lexical_token in self.modifiers: 
+                return RuleToken(RuleToken.MODIFIER,lexical_token)
 
             # Process modifer info lexical_token;
             elif len(lexical_token) >= 3 and lexical_token[0:3] == 'end':
                                     return RuleToken(RuleToken.MODIFIER_INFO, lexical_token)
             else:                   return RuleToken(RuleToken.NON_TERMINAL, lexical_token)
+
+
         i = 0
         while i < len(tokens):
             lexical_token = tokens[i]
-            if lexical_token == ';': break
+            if lexical_token == ';': break # ';' signifies the end of the rule
         
-            # Process sub_rules:
+            # I think that this is unecessary or does not belong here:
+            # I should simply be identifyfing parens as tokens, and build_rule() should handle constructing
+            # the recursive sub-rules. 
+
+            # I think nesting the sub-rule tokens at this point is pre-mature. Consider moving this logic
+            # out of this into build_rule()
+
             def process_sub_rule(lexical_token, i):
                 k = i; i += 1; lexical_token = tokens[i]
 
                 rule = RuleToken(RuleToken.SUB_RULE,'SUB_RULE')                
                 while lexical_token != ')':
                     if lexical_token == '(': 
+                        # Recursively handle sub-sub rules:
                         n, sub_rule = process_sub_rule(lexical_token, i)
                         rule.sub_list.append(sub_rule)
                         i += n
                     else:
-                        rule.sub_list.append(rules(lexical_token))
+                        rule.sub_list.append(create_rule_token(lexical_token))
                         i += 1
                     lexical_token = tokens[i]
                 i += 1               
-                return (i - k), rule
+                return (i - k), rule # Return how many tokens were processed, and the rule
 
+            # Process sub_rules:
             if lexical_token == '(': 
                 n, sub_rule = process_sub_rule(lexical_token, i)
                 rule_tokens.append(sub_rule)
                 i += n
             else: 
-                rule_tokens.append(rules(lexical_token))
+                rule_tokens.append(create_rule_token(lexical_token))
                 i += 1
+                
         return rule_tokens
 
     def _read_rules_and_predicates(self, grammar_file_path):
-
-        # TODO: Seperate reading in rules and predicates, then bust any rule reading out into a module and import that stuff
 
         """ This function opens the grammar file located at 'grammar_file_path' and reads
             in the rules and predicates.
             
             @ Return:
             rule_tokens - A list of rule_token lists, one per rule
-            predicates  - A dict of rule_name to it's predictor (lexical token)
+            predicates  - A dict of rule_name to it's predictor (lexical token) - These are auto-generated now?
         """
         with open(grammar_file_path) as f:
             
