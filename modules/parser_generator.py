@@ -53,7 +53,7 @@ class GrammarReader:
     self.__init__() will call self._read_rules_predicates() to load in the rules as lists of rule_tokens
     and predicates as a dict.
 
-    Then, self.__init_() calls self._build_rules() which will fill self.rules (a list) with Nodes.
+    Then, self.__init_() calls self._build_rules_from_RuleTokens() which will fill self.rules (a list) with Nodes.
 
     Each Node in self.rules has: 'name' (rule name), 'type' (terminal, non-terminal, etc etc), 
     and 'nodes' (a list of nodes which make up the rule definition).
@@ -85,7 +85,7 @@ class GrammarReader:
 
         if mode == 'rule':
             self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
-            self._build_rules() # Fills self.rules        
+            self._build_rules_from_RuleTokens() # Fills self.rules        
             self._generate_predicates()
 
     def read_tokens(self, fpath):
@@ -104,7 +104,7 @@ class GrammarReader:
             k,v = l_tkns[0],l_tkns[1]
             if len(l_tkns) >= 3 and l_tkns[1] == "NON_PRE_DEF":  # Generate lexer funcs
                 v = l_tkns[2:]
-                rule_tokens = self._process_rule(v, mode='token')
+                rule_tokens = self._convert_text_to_RuleTokens(v, mode='token')
                 rule_AST = self._build_rule(rule_tokens, mode='token')
 
                 v = rule_AST
@@ -153,7 +153,7 @@ class GrammarReader:
             print(rep, end=', ')
         else: print(f"{item.name}", end=', ')
     
-    def _build_rules(self):        
+    def _build_rules_from_RuleTokens(self):        
         for rule_list in self.rule_tokens:
             self._build_rule(rule_list, mode='rule')
         
@@ -237,6 +237,7 @@ class GrammarReader:
                     last_was_prefix = True
                     child = Node(name=rule_token.text, ntype=rule_token.type)      
 
+            # Sub rules start with a left paren:
             elif rule_token.type == RuleToken.LPAREN:
                 child = Node(name="SUB_RULE", ntype=RuleToken.SUB_RULE)       
                 self._build_definition(child, rule_list)
@@ -246,6 +247,7 @@ class GrammarReader:
                 if child.nodes[0].type == RuleToken.MODIFIER:
                     child = child.nodes[0] 
 
+            # ... And end with a right paren:
             elif rule_token.type == RuleToken.RPAREN: return
 
             # Assign infix and prefix modfier nodes their right child node:
@@ -275,7 +277,7 @@ class GrammarReader:
             rule.nodes.append(child)                        
             #print(f"Adding {child} to rule def...")
 
-    def _process_rule(self, tokens, mode='rule'):
+    def _convert_text_to_RuleTokens(self, tokens, mode='rule'):
         """ From a list of text-tokens, make and return a list of rule-tokens.
             Rule token types: rule_name, non_terminal, terminal, modifier
         """
@@ -340,7 +342,7 @@ class GrammarReader:
                 
                 # Once we've collected a rules worth of tokens, process the rule:
                 if tokens[-1] == ';': 
-                    self.rule_tokens.append(self._process_rule(tokens))
+                    self.rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
                     tokens = []
 
             # ------------------------------------------------------------------
@@ -540,7 +542,7 @@ class ParserGenerator( GrammarReader ):
                 
                 suite       = child.nodes[0] 
 
-                if child.name == '+': # 1 or more of the previous token, so force match 1 time:
+                if child.name == '+': # Match 1 or more of the previous token, so force match 1 time:
                     gen_func_body_statement(suite, tab)
 
                 self.add_line(
@@ -550,7 +552,7 @@ class ParserGenerator( GrammarReader ):
 
                 gen_func_body_statement(suite, tab+1)
             
-            elif child.name in '|':              # RT.MODIFIER: This OR this OR this
+            elif child.name in '|': # RT.MODIFIER: This OR this OR this
 
                 # The first test will always be an 'if' statment:
                 self.add_line(

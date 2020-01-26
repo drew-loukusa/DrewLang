@@ -31,9 +31,10 @@ add_op       : '+' | '-'                                                        
 mult_op      : '*' | '/'                                                        ;
 
 # Map rule_name to the token_name that predicts said rule:
+# I think I can delete these hand-written predicates now, I auto-generate these.
 PREDICATES: 
 
-namelist -> NAME
+#namelist -> NAME
 assignstat -> NAME&EQUALS
 NAME -> NAME
 NUMBER -> NUMBER
@@ -41,7 +42,7 @@ STRING -> STRING
 GE -> GT&EQUALS
 LE -> LT&EQUALS
 funccall -> NAME&LPAREN
-parameters -> LPAREN
+#parameters -> LPAREN
 END
 
 TOKENS: 

@@ -98,10 +98,12 @@ class Parser:
             self.term()
     
     def term(self):
-        self.atom()
+        root = self.atom()
         while self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
-            self.mult_op()
-            self.atom()
+            node1 = root 
+            root = self.mult_op()
+            root.add_child(node1)     
+            root.add_child(self.atom())
     
     def atom(self):
         if self.LA(1) == self.input.NAME:
