@@ -35,6 +35,10 @@ class Node:
         self.type = ntype   # RuleToken type as a string
         self.nodes = []     # A list of nodes
 
+        # AST Information:
+        self.is_root = None
+        self.is_child = None 
+
     def __str__(self):        
         def_list = ""
         for item in self.nodes[:-1]:
@@ -77,6 +81,9 @@ class GrammarReader:
         self.rule_tokens = []   # List of RuleToken lists
         self.predicates = {}    # Dict of rule_name -> what token predicts said rule
 
+        self.ast_rule_tokens = []
+        self.AST_info_for_rules = []
+
         self.prefix_mods   = ['^', '~']
         self.infix_mods    = ['|', '..']
         self.postfix_mods  = ['*', '?', '+']
@@ -87,6 +94,8 @@ class GrammarReader:
             self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
             self._build_rules_from_RuleTokens() # Fills self.rules        
             self._generate_predicates()
+
+            self._decorate_rules_with_AST_info()
 
     def read_tokens(self, fpath):
         lines = []
@@ -277,7 +286,7 @@ class GrammarReader:
             rule.nodes.append(child)                        
             #print(f"Adding {child} to rule def...")
 
-    def _convert_text_to_RuleTokens(self, tokens, mode='rule'):
+    def _convert_text_to_RuleTokens(self, tokens, mode='rule') -> list: 
         """ From a list of text-tokens, make and return a list of rule-tokens.
             Rule token types: rule_name, non_terminal, terminal, modifier
         """
@@ -332,7 +341,7 @@ class GrammarReader:
             # ------------------------------------------------------------------
             # Read in the rules:
             tokens = []
-            while "PREDICATES" not in (line := f.readline()):     
+            while "END" not in (line := f.readline()):     
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
                 
@@ -343,6 +352,22 @@ class GrammarReader:
                 # Once we've collected a rules worth of tokens, process the rule:
                 if tokens[-1] == ';': 
                     self.rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
+                    tokens = []
+
+            tokens = []
+            # ------------------------------------------------------------------
+            # Read in the AST definitions:
+            while "END" not in (line := f.readline()):     
+                # Ignore comments and blank lines:
+                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
+                
+                # Probably should not lex the line using str.split(), 
+                # but it WORKS FOR NOW:
+                tokens += (line.split())
+                
+                # Once we've collected a rules worth of tokens, process the rule:
+                if tokens[-1] == ';': 
+                    self.ast_rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
                     tokens = []
 
             # ------------------------------------------------------------------
@@ -425,6 +450,11 @@ class GrammarReader:
             self.predicates[key] = lex.getTokenNameFromText(token_text)
 
         self.rules.reverse()
+
+    def _decorate_rules_with_AST_info(self):
+        for ast_rule_list in self.ast_rule_tokens:
+            rule_name = ast_rule_list[0]
+            
 
 class ParserGenerator( GrammarReader ):
 

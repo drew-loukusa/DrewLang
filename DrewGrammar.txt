@@ -21,18 +21,60 @@ term         : atom ( mult_op atom ) *                                          
 atom         : NAME | NUMBER | STRING | funccall                                ;
 test         : expr cmp_op expr                                                 ;
 
-funcdef      : 'def' NAME parameters statement                                  ;
-funccall     : NAME parameters ';'                                              ;
-parameters   : '(' exprlist ? ')'                                               ;
+funcdef      : 'def' NAME '(' exprlist ? ')' statement                          ;
+funccall     : NAME '(' exprlist ? ')' ';'                                      ;
 exprlist     : expr ( ',' expr ) *                                              ;
 
 cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
 add_op       : '+' | '-'                                                        ;
 mult_op      : '*' | '/'                                                        ;
 
+END
+
+# --------------------------------- AST ---------------------------------------
+
+program         : ^ $PROGRAM statement *    ; 
+statement       : ^ printstat 
+                | ^ blockstat 
+                | ^ ifstat 
+                | ^ whilestat 
+                | ^ assignstat 
+                | ^ funcdef 
+                | ^ funccall 
+                | ^ exprstat 
+                ;
+
+assignstat      : NAME '=' expr ';'             -> ^( '=' NAME expr )               ; 
+printstat       : 'print' '(' expr ')' ';'      -> ^( 'print' expr )                ;
+ifstat          : 'if' '(' test ')' statement   -> ^( 'if' test statement )         ; 
+blockstat       : '{' statement *  '}'          -> ^( $BLOCKSTAT statement * )      ; 
+exprstat        : ^ expr ';'                    -> ^( expr )                        ;   
+
+expr            : term  ( ^ add_op term ) *                     ;
+term            : atom  ( ^ mult_op atom ) *                    ; 
+atom            : ^ NAME | ^ NUMBER | ^ STRING | ^ funccall     ; 
+test            : expr ^ cmp_op expr                            ;
+
+funcdef         : ^ 'def' NAME '(' exprlist ? ')' statement     ;
+funccall        : ^ NAME '(' exprlist ? ')' ';'                 ;
+exprlist        : ^ $EXPRLIST expr ( ',' expr ) *               ; 
+
+cmp_op          : ^ '==' | ^ '>=' | ^ '<=' | ^ '>' | ^ '<'      ;
+add_op          : ^ '+' | ^ '-'                                 ;
+mult_op         : ^ '*' | ^ '/'                                 ; 
+
+END
+
 # Map rule_name to the token_name that predicts said rule:
-# I think I can delete these hand-written predicates now, I auto-generate these.
-PREDICATES: 
+# I auto-generate most predicates, it would be nice to have that for ALL predicates.
+# These are still hand-written beacuse my code can't yet calculate when rules will have 
+# conflicting look-ahead sets, i.e. two rules are predicted by the same start token.
+# I will improve my code at a later date to take care of this.
+
+# Also, I have tokens in here? Do I need those anymore ? 
+
+
+# ------------------------------- Predicates ----------------------------------
 
 #namelist -> NAME
 assignstat -> NAME&EQUALS

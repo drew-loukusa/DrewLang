@@ -98,12 +98,10 @@ class Parser:
             self.term()
     
     def term(self):
-        root = self.atom()
+        self.atom()
         while self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
-            node1 = root 
-            root = self.mult_op()
-            root.add_child(node1)     
-            root.add_child(self.atom())
+            self.mult_op()
+            self.atom()
     
     def atom(self):
         if self.LA(1) == self.input.NAME:
@@ -124,19 +122,19 @@ class Parser:
     def funcdef(self):
         self.match('def')
         self.match(self.input.NAME)
-        self.parameters()
-        self.statement()
-    
-    def funccall(self):
-        self.match(self.input.NAME)
-        self.parameters()
-        self.match(';')
-    
-    def parameters(self):
         self.match('(')
         if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             self.exprlist()
         self.match(')')
+        self.statement()
+    
+    def funccall(self):
+        self.match(self.input.NAME)
+        self.match('(')
+        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+            self.exprlist()
+        self.match(')')
+        self.match(';')
     
     def exprlist(self):
         self.expr()

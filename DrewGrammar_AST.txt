@@ -1,9 +1,0 @@
-# program       : Define way to describe this as being the entry point; the root of the AST ;
-statement       : ^ ( printstat | blockstat | ifstat | whilestat | assignstat | funcdef | funccall | exprstat  )  ;
-assignstat      : ^ '=' NAME expr           ; 
-printstat       : ^ 'print' expr            ;
-ifstat          : ^ 'if' test statement     ;
-blockstat       : ^ $BLOCKSTAT statement *  ; 
-exprstat        : ^ expr                    ; 
-
-expr            : ( ^ term ) | ( ^ add_op term term )

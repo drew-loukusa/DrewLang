@@ -1,4 +1,21 @@
-TODO: 
+AST Todo:
+
+*   I have decided on a format for describing the AST structure in my grammar. It's essentially the ANTLR format, but             _slightly_ changed. Now I need to do the following:
+
+*   Figure out how to handle no root node being set: See expr. 
+
+        Root is add_op for expr, but add_op is optional.
+        What code will I generate to handle that? (No root node)
+
+*   Handle embedding ^ into normal rule defs. 
+
+        Will have to make generator ignore ';' and '{' and other non-ast things to support that style of AST def.
+
+*   Handle ' -> ^( ast def ) ' 
+
+        Will have to make changes to _bulid_rules_from_RuleTokens() to accomodate this new change.
+
+MISC TODO: 
 
 *   Write tests for parser: Ensure it correctly parses everything in your grammar
     Consider using pytest? Or some other testing framework.
@@ -15,7 +32,7 @@ TODO:
     add multi-char tokens in the future), 
     your job there should be easier. 
 
-    Write some TEST code as well, a short little __name__ == "__main__" thingy like the other modules.
+    Write some TEST code as well, a short little \_\_name__ == "\_\_main__" thingy like the other modules.
 
     Give more thought to implementing the ^ operator for denoting ROOT of AST 
     (for multiple options for root, use ^ ( a | b | c )) 
@@ -33,4 +50,4 @@ TODO:
 *   Add support for exponets in expressions
         
 
-* Test that the parser correctly tells you where syntax errors are occuring (line number and char position)
+*   Test that the parser correctly tells you where syntax errors are occuring (line number and char position)
