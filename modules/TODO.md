@@ -7,13 +7,11 @@ AST Todo:
         Root is add_op for expr, but add_op is optional.
         What code will I generate to handle that? (No root node)
 
-*   Handle embedding ^ into normal rule defs. 
+*   Grammar support for embedded ^ and AST rewrites is implemented.
+    Probably needs to be refactored at some point, but the basic functionality is there.
 
-        Will have to make generator ignore ';' and '{' and other non-ast things to support that style of AST def.
-
-*   Handle ' -> ^( ast def ) ' 
-
-        Will have to make changes to _bulid_rules_from_RuleTokens() to accomodate this new change.
+*   Now, you have all the info you need in the IR to build a parser with AST code.
+    That's up next.
 
 MISC TODO: 
 
