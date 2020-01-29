@@ -42,7 +42,12 @@ class Node:
     def __str__(self):        
         def_list = ""
         for item in self.nodes[:-1]:
-            if item: def_list += f"{item.name}, "
+            if item: 
+                if item.name == '^':
+                    def_list += f"{item.name} {item.nodes[0]}"
+                else:
+                    def_list += f"{item.name}, "
+                    
         if self.nodes[-1]: def_list += f"{item.name}"
 
         return f"{self.name}; [{def_list}]"
@@ -81,9 +86,6 @@ class GrammarReader:
         self.rule_tokens = []   # List of RuleToken lists
         self.predicates = {}    # Dict of rule_name -> what token predicts said rule
 
-        self.ast_rule_tokens = []
-        self.AST_info_for_rules = []
-
         self.prefix_mods   = ['^', '~']
         self.infix_mods    = ['|', '..']
         self.postfix_mods  = ['*', '?', '+']
@@ -93,9 +95,7 @@ class GrammarReader:
         if mode == 'rule':
             self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
             self._build_rules_from_RuleTokens() # Fills self.rules        
-            self._generate_predicates()
-
-            self._decorate_rules_with_AST_info()
+            #self._generate_predicates()
 
     def read_tokens(self, fpath):
         lines = []
@@ -151,16 +151,25 @@ class GrammarReader:
                 print(' ]')
 
     def print_rule(self, item):
+
+        def name_of_(item):
+            if item.is_root:
+                return "^"+item.name 
+            elif item.is_child:
+                return 'c>'+item.name
+            return item.name
+
         decend_set = ['*', '|', '+', '~', '?', "SUB_RULE"]
         if item.name in decend_set:                 
-            print(f"'{item.name}' -> [ ", end='')
+            print(f"'{name_of_(item)}' -> [ ", end='')
             rep = ""
             for node in item.nodes:
                 if node.name in decend_set: self.print_rule(node)
-                else: rep += f"{node.name}, "
+                else: rep += f"{name_of_(node)}, "
             rep += ' ]'
-            print(rep, end=', ')
-        else: print(f"{item.name}", end=', ')
+            print(rep, end=', ')        
+        else: 
+            print(f"{name_of_(item)}", end=', ')
     
     def _build_rules_from_RuleTokens(self):        
         for rule_list in self.rule_tokens:
@@ -198,8 +207,17 @@ class GrammarReader:
         last_was_infix      = False       
         last_was_star       = False 
 
+        AST_Rewrite         = False
+
+        # Handle normal rule:
         while len(rule_list) > 0:        
             rule_token = rule_list.pop(0)
+
+            # If an AST rewrite exists, quit this loop, go to AST rewrite loop.
+            if rule_token.text == '->': 
+                AST_Rewrite = True
+                break 
+
             child = None
 
             if rule_token.type == RuleToken.NON_TERMINAL:                 
@@ -253,7 +271,8 @@ class GrammarReader:
                 
                 # Make the modifier node the child instead of SUB_RULE, since 
                 # modifiers only ever serve as root nodes for a tree:
-                if child.nodes[0].type == RuleToken.MODIFIER:
+                if  len(child.nodes) == 1 and \
+                    child.nodes[0].type == RuleToken.MODIFIER:
                     child = child.nodes[0] 
 
             # ... And end with a right paren:
@@ -285,6 +304,52 @@ class GrammarReader:
             # Add child to the rules nodes (list):
             rule.nodes.append(child)                        
             #print(f"Adding {child} to rule def...")
+
+        # Do "text" conversions: Change ^ ( a | b | c) to ^ a | ^ b | ^ c
+        # My code does not allow chained operators like above, so if you 
+        # apply root to a sub-rule with ors inside, it will apply the root 
+        # to each node for you.
+
+        # Also just change the '^' into a node field.
+        def root_symbol_to_field(rule):
+            for i, node in enumerate(rule.nodes):
+                
+                if node.name in self.modifiers + ["SUB_RULE"]:
+                    root_symbol_to_field(node)
+
+                if node.name == '^' and node.nodes[0].name == '|':
+                    or_node = node.nodes[0]
+                    for sub_node in or_node.nodes:
+                        sub_node.is_root = True 
+                    rule.nodes[i] = node.nodes[0]
+
+                elif node.name == '^':
+                    node.nodes[0].is_root = True
+                    rule.nodes[i] = node.nodes[0]
+
+                # Also set child field if there is no AST-Rewrite:
+                elif not AST_Rewrite and node.type in \
+                    [RuleToken.TERMINAL, RuleToken.NON_TERMINAL]:
+                    node.is_child = True
+        
+        root_symbol_to_field(rule)
+
+        if not AST_Rewrite: return 
+
+        # Handle AST Rewrite:
+        
+        rule_list.pop(0) # Pop '^(' 
+        while len(rule_list) > 0: 
+            rule_token = rule_list.pop(0)
+            if rule_token.name == ')': break
+
+            for node in rule.nodes:
+                # Make this decend into nodes when needed.
+                # Make this a recursive method, to do that.
+                # Like every other time I deal with this data structure lol.
+
+                # Then apply root and child as needed
+                pass
 
     def _convert_text_to_RuleTokens(self, tokens, mode='rule') -> list: 
         """ From a list of text-tokens, make and return a list of rule-tokens.
@@ -335,11 +400,16 @@ class GrammarReader:
             @ Return:
             rule_tokens - A list of rule_token lists, one per rule
             predicates  - A dict of rule_name to it's predictor (lexical token) - These are auto-generated now?
-        """
+        """        
         with open(grammar_file_path) as f:
             
-            # ------------------------------------------------------------------
+            def goto_section(start_string):
+                while start_string not in f.readline(): pass                
+
             # Read in the rules:
+            # ------------------------------------------------------------------
+            #goto_section("GRAMMAR")
+            goto_section("AST")
             tokens = []
             while "END" not in (line := f.readline()):     
                 # Ignore comments and blank lines:
@@ -354,30 +424,17 @@ class GrammarReader:
                     self.rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
                     tokens = []
 
-            tokens = []
+           
+            # Read in predicates: 
             # ------------------------------------------------------------------
-            # Read in the AST definitions:
-            while "END" not in (line := f.readline()):     
-                # Ignore comments and blank lines:
-                if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
-                
-                # Probably should not lex the line using str.split(), 
-                # but it WORKS FOR NOW:
-                tokens += (line.split())
-                
-                # Once we've collected a rules worth of tokens, process the rule:
-                if tokens[-1] == ';': 
-                    self.ast_rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
-                    tokens = []
-
-            # ------------------------------------------------------------------
-            # Read in predicates: (Pre-written predicates are for rules which require
-            # 2 tokens of look ahead)
+            # (Pre-written predicates are for rules which require 2 tokens of look ahead)
             """ I use what I'm terming 'predicates' to help generate source code. 
                 They're not strictly necessary, and I will probably revise
                 my generator so that it can extract that info from the grammar itself,
                 but for now I have them as their own section in the grammar file.       
             """
+            goto_section("PREDICATES")
+            tokens = []
             while "END" not in (line := f.readline()):
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
@@ -398,6 +455,8 @@ class GrammarReader:
             #print('(', node.name, ',', end='')
             #print("trying to get predictor for:", node.name)   
             name = node.name
+
+            if name == '^': name = node.nodes[0]
             
             # If name is double quoted, make it single quoted:
             if len(name) >= 3:
@@ -450,11 +509,6 @@ class GrammarReader:
             self.predicates[key] = lex.getTokenNameFromText(token_text)
 
         self.rules.reverse()
-
-    def _decorate_rules_with_AST_info(self):
-        for ast_rule_list in self.ast_rule_tokens:
-            rule_name = ast_rule_list[0]
-            
 
 class ParserGenerator( GrammarReader ):
 
@@ -639,6 +693,8 @@ if __name__ == "__main__":
     g = ParserGenerator(grammar_file)
 
     g.dump(dump_rules=True, dump_predicates=True)
+
+    quit()
    
     header = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_header.py")]
     footer = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_footer.py")]

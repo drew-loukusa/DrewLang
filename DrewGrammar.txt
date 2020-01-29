@@ -1,3 +1,5 @@
+GRAMMAR 
+
 program      : statement *                                                     ;
 statement    : printstat           
              | blockstat   
@@ -31,37 +33,39 @@ mult_op      : '*' | '/'                                                        
 
 END
 
-# --------------------------------- AST ---------------------------------------
+# ---------------------------------------------------------------------------
+
+AST
 
 program         : ^ $PROGRAM statement *    ; 
-statement       : ^ printstat 
-                | ^ blockstat 
-                | ^ ifstat 
-                | ^ whilestat 
-                | ^ assignstat 
-                | ^ funcdef 
-                | ^ funccall 
-                | ^ exprstat 
+statement       :  ^ ( printstat 
+                |  blockstat 
+                |  ifstat 
+                |  whilestat 
+                |  assignstat 
+                |  funcdef 
+                |  funccall 
+                |  exprstat )
                 ;
 
 assignstat      : NAME '=' expr ';'             -> ^( '=' NAME expr )               ; 
 printstat       : 'print' '(' expr ')' ';'      -> ^( 'print' expr )                ;
 ifstat          : 'if' '(' test ')' statement   -> ^( 'if' test statement )         ; 
-blockstat       : '{' statement *  '}'          -> ^( $BLOCKSTAT statement * )      ; 
-exprstat        : ^ expr ';'                    -> ^( expr )                        ;   
+blockstat       : '{' statement *  '}'          -> ^( $BLOCKSTAT statement )      ; 
+exprstat        : expr ';'                      -> ^( expr )                        ;   
 
 expr            : term  ( ^ add_op term ) *                     ;
 term            : atom  ( ^ mult_op atom ) *                    ; 
-atom            : ^ NAME | ^ NUMBER | ^ STRING | ^ funccall     ; 
+atom            : ^ ( NAME |  NUMBER |  STRING |  funccall )    ;
 test            : expr ^ cmp_op expr                            ;
 
-funcdef         : ^ 'def' NAME '(' exprlist ? ')' statement     ;
-funccall        : ^ NAME '(' exprlist ? ')' ';'                 ;
-exprlist        : ^ $EXPRLIST expr ( ',' expr ) *               ; 
+funcdef         : 'def' NAME '(' exprlist ? ')' statement -> ^( 'def' NAME exprlist statement )  ;
+funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )       ;
+exprlist        : expr ( ',' expr ) *                     -> ^( $EXPRLIST expr expr )      ; 
 
-cmp_op          : ^ '==' | ^ '>=' | ^ '<=' | ^ '>' | ^ '<'      ;
-add_op          : ^ '+' | ^ '-'                                 ;
-mult_op         : ^ '*' | ^ '/'                                 ; 
+cmp_op          : ^ ( '==' |  '>=' |  '<=' |  '>' |  '<' )      ;
+add_op          : ^ ( '+' | '-' )                               ;
+mult_op         : ^ ( '*' | '/' )                               ; 
 
 END
 
@@ -74,7 +78,9 @@ END
 # Also, I have tokens in here? Do I need those anymore ? 
 
 
-# ------------------------------- Predicates ----------------------------------
+# -----------------------------------------------------------------
+
+PREDICATES 
 
 #namelist -> NAME
 assignstat -> NAME&EQUALS
