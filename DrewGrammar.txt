@@ -48,11 +48,11 @@ statement       :  ^ ( printstat
                 |  exprstat )
                 ;
 
-assignstat      : NAME '=' expr ';'             -> ^( '=' NAME expr )               ; 
-printstat       : 'print' '(' expr ')' ';'      -> ^( 'print' expr )                ;
-ifstat          : 'if' '(' test ')' statement   -> ^( 'if' test statement )         ; 
-blockstat       : '{' statement *  '}'          -> ^( $BLOCKSTAT statement )      ; 
-exprstat        : expr ';'                      -> ^( expr )                        ;   
+assignstat      : NAME '=' expr ';'                 -> ^( '=' NAME expr )               ; 
+printstat       : 'print' '(' expr ')' ';'          -> ^( 'print' expr )                ;
+ifstat          : 'if' '(' test ')' statement       -> ^( 'if' test statement )         ; 
+blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
+exprstat        : expr ';'                          -> ^( expr )                        ;   
 
 expr            : term  ( ^ add_op term ) *                     ;
 term            : atom  ( ^ mult_op atom ) *                    ; 
@@ -61,7 +61,7 @@ test            : expr ^ cmp_op expr                            ;
 
 funcdef         : 'def' NAME '(' exprlist ? ')' statement -> ^( 'def' NAME exprlist statement )  ;
 funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )       ;
-exprlist        : expr ( ',' expr ) *                     -> ^( $EXPRLIST expr expr )      ; 
+exprlist        : $EXPRLIST expr ( ',' expr ) *           -> ^( $EXPRLIST expr expr )      ; 
 
 cmp_op          : ^ ( '==' |  '>=' |  '<=' |  '>' |  '<' )      ;
 add_op          : ^ ( '+' | '-' )                               ;

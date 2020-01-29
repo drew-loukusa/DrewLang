@@ -336,20 +336,31 @@ class GrammarReader:
 
         if not AST_Rewrite: return 
 
-        # Handle AST Rewrite:
-        
+        # Handle AST Rewrite:        
         rule_list.pop(0) # Pop '^(' 
+
+        def apply_child_root(rule_token, rule, root_set):
+            for node in rule.nodes:                    
+                if node.is_root or node.is_child: continue 
+                
+                if node.name in self.modifiers + ['SUB_RULE']:
+                    apply_child_root(rule_token, node, root_set)
+                
+                if node.name == rule_token.text: 
+                    if not root_set[0]: 
+                        node.is_root = True
+                        root_set[0] = True
+                    else:
+                        node.is_child = True
+                    break
+            else:
+                return
+
+        root_set = [False]
         while len(rule_list) > 0: 
             rule_token = rule_list.pop(0)
-            if rule_token.name == ')': break
-
-            for node in rule.nodes:
-                # Make this decend into nodes when needed.
-                # Make this a recursive method, to do that.
-                # Like every other time I deal with this data structure lol.
-
-                # Then apply root and child as needed
-                pass
+            if rule_token.text == ')': break
+            apply_child_root(rule_token, rule, root_set)
 
     def _convert_text_to_RuleTokens(self, tokens, mode='rule') -> list: 
         """ From a list of text-tokens, make and return a list of rule-tokens.
