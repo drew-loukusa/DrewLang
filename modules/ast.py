@@ -28,5 +28,3 @@ class AST:
         
         for child in self.children:
             child.toStringTree(tab+1)
-        
-        #return buf
