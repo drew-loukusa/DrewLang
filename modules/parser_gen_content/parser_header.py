@@ -1,4 +1,5 @@
 from d_lexer import DLexer
+from ast import AST
 import time
 
 class Parser:    
@@ -28,5 +29,6 @@ class Parser:
             x = self.input.getTokenType(x)
         if self.LA(1) == x: # x is token_type 
             self.consume()
+            return AST(self.LT(1)) # Return an AST node created with the current token
         else:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)} on line # {self.LT(1)._line_number}")            

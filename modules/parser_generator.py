@@ -95,7 +95,7 @@ class GrammarReader:
         if mode == 'rule':
             self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
             self._build_rules_from_RuleTokens() # Fills self.rules        
-            #self._generate_predicates()
+            self._generate_predicates()
 
     def read_tokens(self, fpath):
         lines = []
@@ -109,10 +109,12 @@ class GrammarReader:
 
         token_defs = {}
         for line in lines: 
-            l_tkns = line.split()
-            k,v = l_tkns[0],l_tkns[1]
-            if len(l_tkns) >= 3 and l_tkns[1] == "NON_PRE_DEF":  # Generate lexer funcs
-                v = l_tkns[2:]
+            
+            lexical_tkns = line.split()            
+            k,v = lexical_tkns[0:2]
+
+            if len(lexical_tkns) >= 3 and lexical_tkns[1] == "NON_PRE_DEF":  # Generate lexer funcs
+                v = lexical_tkns[2:]
                 rule_tokens = self._convert_text_to_RuleTokens(v, mode='token')
                 rule_AST = self._build_rule(rule_tokens, mode='token')
 
@@ -310,11 +312,19 @@ class GrammarReader:
         # apply root to a sub-rule with ors inside, it will apply the root 
         # to each node for you.
 
-        # Also just change the '^' into a node field.
+        # No text conversion is actually happening, but that's the best way to explain it.
+        # I read in ^( a | b | c ) into a node data structure and perform the ^ application 
+        # on that data structure. 
+
+        # At the same time, I'm also changing the '^' from a node into a node field.
+        # ^ NAME would look like: Node( '^', Children: Node( NAME ) )
+        # Transform that into:
+        # Node( NAME, is_root: True )
+
         def root_symbol_to_field(rule):
             for i, node in enumerate(rule.nodes):
                 
-                if node.name in self.modifiers + ["SUB_RULE"]:
+                if node.name in self.modifiers + ["SUB_RULE"] and node.name != '^':
                     root_symbol_to_field(node)
 
                 if node.name == '^' and node.nodes[0].name == '|':
@@ -330,7 +340,8 @@ class GrammarReader:
                 # Also set child field if there is no AST-Rewrite:
                 elif not AST_Rewrite and node.type in \
                     [RuleToken.TERMINAL, RuleToken.NON_TERMINAL]:
-                    node.is_child = True
+                    if not node.is_root:
+                        node.is_child = True
         
         root_symbol_to_field(rule)
 
@@ -342,7 +353,7 @@ class GrammarReader:
         def apply_child_root(rule_token, rule, root_set):
             for node in rule.nodes:                    
                 if node.is_root or node.is_child: continue 
-                
+
                 if node.name in self.modifiers + ['SUB_RULE']:
                     apply_child_root(rule_token, node, root_set)
                 
@@ -503,6 +514,8 @@ class GrammarReader:
                 predictor = build_predicate_text( fnode.nodes[0] )
             
             else: 
+                if fnode.name[0] == '$': # Ignore artificial AST nodes:
+                    fnode = rule.nodes[1]
                 predictor = build_predicate_text( fnode )
             
             # Temporary........................................... see init in lexer? for info
@@ -591,6 +604,7 @@ class ParserGenerator( GrammarReader ):
             """ Accepts a node, 'child', and generates the appropriate python statement, 
                 or suite of statements based on what RuleToken type the node is. 
             """
+
             if child.type in [RT.TERMINAL, RT.NON_TERMINAL]:                           
                 ltab = tab 
                 if optional:                     
@@ -600,27 +614,37 @@ class ParserGenerator( GrammarReader ):
                     )
                     ltab += 1
 
-                """ 
-                NOTE: I think right here (RT.TERMINAL below) is where MOST of the work will happen for AST stuff.
+                new_text = ""
 
-                Provided an appropriate data structure is created and then available at this point in the process,
-                then you should be able to check that data structure for what this sub-rule should be; a root node,
-                a child node, or not a node at all (ignored). 
+                # AST Stuff:                
+                if child.is_child: 
+                    new_text = "lnodes.append( "
+                if child.is_root:                      
+                    self.add_line("temp = root", tab)                        
+                    new_text = "root = "
 
-                Then, you can add the appropriate AST NODE code prefix to the "self.match()" or "self.RULE()" call.
-
-                Then outside of this func, you can add the general statements that appear in each func,
-                and also var initilizations as needed according to the AST rule data structure
+                # If child is artifcial AST node:
+                if child.name[0] == '$': 
+                    new_text += f"AST(name='{child.name[1:]}', artificial=True)"
                 
-                """
-
-                if child.type == RT.TERMINAL:
-                    match_text = child.name
-                    if match_text.isupper(): 
-                        match_text = f"self.input.{match_text}"
-                    self.add_line(f"self.match({match_text})", ltab)
                 else:
-                    self.add_line(f"self.{child.name}()", ltab)
+                    if child.type == RT.TERMINAL:
+                        match_text = child.name                    
+                        # Match non-pre-defined terminal tokens, which are defined in ALL_CAPS
+                        if match_text.isupper():
+                            match_text = f"self.input.{match_text}"
+
+                        new_text += f"self.match({match_text})"
+                        
+                    else:
+                        new_text += f"self.{child.name}()"
+                    
+                    if child.is_child: new_text += " )"
+
+                self.add_line(new_text, ltab)
+
+                if child.is_root:  
+                    self.add_line("if temp: root.addChild(temp) ", tab)
             
             if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER             
 
@@ -688,9 +712,15 @@ class ParserGenerator( GrammarReader ):
             # Generate the function name:
             self.add_line(f"def {rule.name}(self):", tab); tab += 1
 
+            # AST Stuff:
+            self.add_line(f"root, lnodes = None, []", tab)             
+
             # Generate the function body for a rules function.
             for child in rule.nodes:
                 gen_func_body_statement(child, tab)
+                
+            self.add_line("if root: root.children.extend(lnodes); return root", tab)
+            self.add_line("else: return lnodes[0]", tab)
         
         self.source_code += footer
         return self.source_code
@@ -705,7 +735,7 @@ if __name__ == "__main__":
 
     g.dump(dump_rules=True, dump_predicates=True)
 
-    quit()
+    #quit()
    
     header = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_header.py")]
     footer = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_footer.py")]

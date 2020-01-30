@@ -18,19 +18,15 @@ class AST:
     def toString(self):
         return str(self.token) if self.token is not None else "None"
 
-    def toStringTree(self):
-        if len(self.children) == 0: return self.toString()
+    def toStringTree(self, tab=0):
+        if len(self.children) == 0: 
+            print('--'*tab + self.toString())
+            return
 
-        buf = ""
         if not self.isNone(): 
-            buf += f"({self.toString()} "
+            print('--'*tab + f"{self.toString()}")
         
         for child in self.children:
-            if child != self.children[0]: 
-                buf += " "
-            buf += child.toStringTree()
-            
-        if not self.isNone():
-            buf += ')'
+            child.toStringTree(tab+1)
         
-        return buf
+        #return buf

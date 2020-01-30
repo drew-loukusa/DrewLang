@@ -51,6 +51,7 @@ statement       :  ^ ( printstat
 assignstat      : NAME '=' expr ';'                 -> ^( '=' NAME expr )               ; 
 printstat       : 'print' '(' expr ')' ';'          -> ^( 'print' expr )                ;
 ifstat          : 'if' '(' test ')' statement       -> ^( 'if' test statement )         ; 
+whilestat       : 'while' '(' test ')' statement    -> ^( 'while' test statement )      ;
 blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
 exprstat        : expr ';'                          -> ^( expr )                        ;   
 

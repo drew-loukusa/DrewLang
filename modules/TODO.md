@@ -1,17 +1,7 @@
 AST Todo:
 
-*   I have decided on a format for describing the AST structure in my grammar. It's essentially the ANTLR format, but             _slightly_ changed. Now I need to do the following:
-
-*   Figure out how to handle no root node being set: See expr. 
-
-        Root is add_op for expr, but add_op is optional.
-        What code will I generate to handle that? (No root node)
-
 *   Grammar support for embedded ^ and AST rewrites is implemented.
     Probably needs to be refactored at some point, but the basic functionality is there.
-
-*   Now, you have all the info you need in the IR to build a parser with AST code.
-    That's up next.
 
 MISC TODO: 
 

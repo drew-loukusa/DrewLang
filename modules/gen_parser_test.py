@@ -1,4 +1,5 @@
 from d_lexer import DLexer
+from ast import AST
 import time
 
 class Parser:    
@@ -27,147 +28,274 @@ class Parser:
         if type(x) is str: 
             x = self.input.getTokenType(x)
         if self.LA(1) == x: # x is token_type 
+            ast_node = AST(self.LT(1)) # Return an AST node created with the current token
             self.consume()
+            return ast_node
         else:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)} on line # {self.LT(1)._line_number}")            
     
     def program(self):
+        root, lnodes = None, []
+        temp = root
+        root = AST(name='PROGRAM', artificial=True)
+        if temp: root.addChild(temp) 
         while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.statement()
+            lnodes.append( self.statement() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def statement(self):
+        root, lnodes = None, []
         if self.LA(1) == self.input.PRINT:
-            self.printstat()
+            temp = root
+            root = self.printstat()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.LCURBRACK:
-            self.blockstat()
+            temp = root
+            root = self.blockstat()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.IF:
-            self.ifstat()
+            temp = root
+            root = self.ifstat()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.WHILE:
-            self.whilestat()
+            temp = root
+            root = self.whilestat()
+            if temp: root.addChild(temp) 
         elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS) :
-            self.assignstat()
+            temp = root
+            root = self.assignstat()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.DEF:
-            self.funcdef()
+            temp = root
+            root = self.funcdef()
+            if temp: root.addChild(temp) 
         elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.funccall()
+            temp = root
+            root = self.funccall()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.exprstat()
+            temp = root
+            root = self.exprstat()
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def assignstat(self):
-        self.match(self.input.NAME)
-        self.match('=')
-        self.expr()
+        root, lnodes = None, []
+        lnodes.append( self.match(self.input.NAME) )
+        temp = root
+        root = self.match('=')
+        if temp: root.addChild(temp) 
+        lnodes.append( self.expr() )
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def printstat(self):
-        self.match('print')
+        root, lnodes = None, []
+        temp = root
+        root = self.match('print')
+        if temp: root.addChild(temp) 
         self.match('(')
-        self.expr()
+        lnodes.append( self.expr() )
         self.match(')')
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def ifstat(self):
-        self.match('if')
+        root, lnodes = None, []
+        temp = root
+        root = self.match('if')
+        if temp: root.addChild(temp) 
         self.match('(')
-        self.test()
+        lnodes.append( self.test() )
         self.match(')')
-        self.statement()
+        lnodes.append( self.statement() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def whilestat(self):
-        self.match('while')
+        root, lnodes = None, []
+        temp = root
+        root = self.match('while')
+        if temp: root.addChild(temp) 
         self.match('(')
-        self.test()
+        lnodes.append( self.test() )
         self.match(')')
-        self.statement()
+        lnodes.append( self.statement() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def blockstat(self):
+        root, lnodes = None, []
+        temp = root
+        root = AST(name='BLOCKSTAT', artificial=True)
+        if temp: root.addChild(temp) 
         self.match('{')
         while self.LA(1) != self.input.RCURBRACK:
-            self.statement()
+            lnodes.append( self.statement() )
         self.match('}')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def exprstat(self):
-        self.expr()
+        root, lnodes = None, []
+        temp = root
+        root = self.expr()
+        if temp: root.addChild(temp) 
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def expr(self):
-        self.term()
+        root, lnodes = None, []
+        lnodes.append( self.term() )
         while self.LA(1) == self.input.PLUS or self.LA(1) == self.input.DASH:
-            self.add_op()
-            self.term()
+            temp = root
+            root = self.add_op()
+            if temp: root.addChild(temp) 
+            lnodes.append( self.term() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def term(self):
-        self.atom()
+        root, lnodes = None, []
+        lnodes.append( self.atom() )
         while self.LA(1) == self.input.STAR or self.LA(1) == self.input.FSLASH:
-            self.mult_op()
-            self.atom()
+            temp = root
+            root = self.mult_op()
+            if temp: root.addChild(temp) 
+            lnodes.append( self.atom() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def atom(self):
+        root, lnodes = None, []
         if self.LA(1) == self.input.NAME:
-            self.match(self.input.NAME)
+            temp = root
+            root = self.match(self.input.NAME)
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.NUMBER:
-            self.match(self.input.NUMBER)
+            temp = root
+            root = self.match(self.input.NUMBER)
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.STRING:
-            self.match(self.input.STRING)
+            temp = root
+            root = self.match(self.input.STRING)
+            if temp: root.addChild(temp) 
         elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.funccall()
+            temp = root
+            root = self.funccall()
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def test(self):
-        self.expr()
-        self.cmp_op()
-        self.expr()
+        root, lnodes = None, []
+        lnodes.append( self.expr() )
+        temp = root
+        root = self.cmp_op()
+        if temp: root.addChild(temp) 
+        lnodes.append( self.expr() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def funcdef(self):
-        self.match('def')
-        self.match(self.input.NAME)
+        root, lnodes = None, []
+        temp = root
+        root = self.match('def')
+        if temp: root.addChild(temp) 
+        lnodes.append( self.match(self.input.NAME) )
         self.match('(')
         if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.exprlist()
+            lnodes.append( self.exprlist() )
         self.match(')')
-        self.statement()
+        lnodes.append( self.statement() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def funccall(self):
-        self.match(self.input.NAME)
+        root, lnodes = None, []
+        temp = root
+        root = self.match(self.input.NAME)
+        if temp: root.addChild(temp) 
         self.match('(')
         if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            self.exprlist()
+            lnodes.append( self.exprlist() )
         self.match(')')
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def exprlist(self):
-        self.expr()
+        root, lnodes = None, []
+        temp = root
+        root = AST(name='EXPRLIST', artificial=True)
+        if temp: root.addChild(temp) 
+        lnodes.append( self.expr() )
         while self.LA(1) == self.input.COMMA:
             self.match(',')
-            self.expr()
+            lnodes.append( self.expr() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def cmp_op(self):
+        root, lnodes = None, []
         if self.LA(1) == self.input.DEQUALS:
-            self.match('==')
+            temp = root
+            root = self.match('==')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.GE:
-            self.match('>=')
+            temp = root
+            root = self.match('>=')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.LE:
-            self.match('<=')
+            temp = root
+            root = self.match('<=')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.GT:
-            self.match('>')
+            temp = root
+            root = self.match('>')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.LT:
-            self.match('<')
+            temp = root
+            root = self.match('<')
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def add_op(self):
+        root, lnodes = None, []
         if self.LA(1) == self.input.PLUS:
-            self.match('+')
+            temp = root
+            root = self.match('+')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.DASH:
-            self.match('-')
+            temp = root
+            root = self.match('-')
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
     
     def mult_op(self):
+        root, lnodes = None, []
         if self.LA(1) == self.input.STAR:
-            self.match('*')
+            temp = root
+            root = self.match('*')
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.FSLASH:
-            self.match('/')
+            temp = root
+            root = self.match('/')
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
 if __name__ == "__main__":
     import os 
     import sys
@@ -178,10 +306,20 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
+    while(x >= 10){
+        print(x);
+        if(x == c){
+            print(x);
+        }
+    }
 }
 """
 
     cwd = os.getcwd() 
     #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
     drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
-    drewparser.program()
+    AST = drewparser.program()
+
+    print(AST.toStringTree())
+
+    foo = 1
