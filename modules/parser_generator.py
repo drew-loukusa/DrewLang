@@ -620,7 +620,8 @@ class ParserGenerator( GrammarReader ):
                 if child.is_child: 
                     new_text = "lnodes.append( "
                 if child.is_root:                      
-                    self.add_line("temp = root", tab)                        
+                    if tab > 2:
+                        self.add_line("temp = root", tab)                        
                     new_text = "root = "
 
                 # If child is artifcial AST node:
@@ -643,7 +644,7 @@ class ParserGenerator( GrammarReader ):
 
                 self.add_line(new_text, ltab)
 
-                if child.is_root:  
+                if child.is_root and tab > 2:  
                     self.add_line("if temp: root.addChild(temp) ", tab)
             
             if child.name in ['*', '+'] and len(child.nodes) > 0:            # RT.MODIFIER             
@@ -718,7 +719,7 @@ class ParserGenerator( GrammarReader ):
             # Generate the function body for a rules function.
             for child in rule.nodes:
                 gen_func_body_statement(child, tab)
-                
+
             self.add_line("if root: root.children.extend(lnodes); return root", tab)
             self.add_line("else: return lnodes[0]", tab)
         

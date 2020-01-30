@@ -28,7 +28,8 @@ class Parser:
         if type(x) is str: 
             x = self.input.getTokenType(x)
         if self.LA(1) == x: # x is token_type 
+            ast_node = AST(self.LT(1)) # Return an AST node created with the current token
             self.consume()
-            return AST(self.LT(1)) # Return an AST node created with the current token
+            return ast_node 
         else:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)} on line # {self.LT(1)._line_number}")            

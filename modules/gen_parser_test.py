@@ -30,16 +30,14 @@ class Parser:
         if self.LA(1) == x: # x is token_type 
             ast_node = AST(self.LT(1)) # Return an AST node created with the current token
             self.consume()
-            return ast_node
+            return ast_node 
         else:
             raise Exception(f"Expecting {self.input.getTokenName(x)}; found {self.LT(1)} on line # {self.LT(1)._line_number}")            
     
     def program(self):
         root, lnodes = None, []
-        temp = root
         root = AST(name='PROGRAM', artificial=True)
-        if temp: root.addChild(temp) 
-        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.DO or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             lnodes.append( self.statement() )
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
@@ -74,6 +72,10 @@ class Parser:
             temp = root
             root = self.funccall()
             if temp: root.addChild(temp) 
+        elif self.LA(1) == self.input.DO:
+            temp = root
+            root = self.dowhile()
+            if temp: root.addChild(temp) 
         elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             temp = root
             root = self.exprstat()
@@ -85,9 +87,7 @@ class Parser:
     def assignstat(self):
         root, lnodes = None, []
         lnodes.append( self.match(self.input.NAME) )
-        temp = root
         root = self.match('=')
-        if temp: root.addChild(temp) 
         lnodes.append( self.expr() )
         self.match(';')
         if root: root.children.extend(lnodes); return root
@@ -95,9 +95,7 @@ class Parser:
     
     def printstat(self):
         root, lnodes = None, []
-        temp = root
         root = self.match('print')
-        if temp: root.addChild(temp) 
         self.match('(')
         lnodes.append( self.expr() )
         self.match(')')
@@ -107,9 +105,7 @@ class Parser:
     
     def ifstat(self):
         root, lnodes = None, []
-        temp = root
         root = self.match('if')
-        if temp: root.addChild(temp) 
         self.match('(')
         lnodes.append( self.test() )
         self.match(')')
@@ -119,9 +115,7 @@ class Parser:
     
     def whilestat(self):
         root, lnodes = None, []
-        temp = root
         root = self.match('while')
-        if temp: root.addChild(temp) 
         self.match('(')
         lnodes.append( self.test() )
         self.match(')')
@@ -131,9 +125,7 @@ class Parser:
     
     def blockstat(self):
         root, lnodes = None, []
-        temp = root
         root = AST(name='BLOCKSTAT', artificial=True)
-        if temp: root.addChild(temp) 
         self.match('{')
         while self.LA(1) != self.input.RCURBRACK:
             lnodes.append( self.statement() )
@@ -143,10 +135,19 @@ class Parser:
     
     def exprstat(self):
         root, lnodes = None, []
-        temp = root
         root = self.expr()
-        if temp: root.addChild(temp) 
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
+    
+    def dowhile(self):
+        root, lnodes = None, []
+        root = self.match('do')
+        lnodes.append( self.blockstat() )
+        self.match('while')
+        self.match('(')
+        lnodes.append( self.test() )
+        self.match(')')
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -197,18 +198,14 @@ class Parser:
     def test(self):
         root, lnodes = None, []
         lnodes.append( self.expr() )
-        temp = root
         root = self.cmp_op()
-        if temp: root.addChild(temp) 
         lnodes.append( self.expr() )
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
     def funcdef(self):
         root, lnodes = None, []
-        temp = root
         root = self.match('def')
-        if temp: root.addChild(temp) 
         lnodes.append( self.match(self.input.NAME) )
         self.match('(')
         if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
@@ -220,9 +217,7 @@ class Parser:
     
     def funccall(self):
         root, lnodes = None, []
-        temp = root
         root = self.match(self.input.NAME)
-        if temp: root.addChild(temp) 
         self.match('(')
         if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
             lnodes.append( self.exprlist() )
@@ -233,9 +228,7 @@ class Parser:
     
     def exprlist(self):
         root, lnodes = None, []
-        temp = root
         root = AST(name='EXPRLIST', artificial=True)
-        if temp: root.addChild(temp) 
         lnodes.append( self.expr() )
         while self.LA(1) == self.input.COMMA:
             self.match(',')
@@ -306,20 +299,14 @@ if(x==0){
     print("xis0");
     print(x);
     x=1;
-    while(x >= 10){
-        print(x);
-        if(x == c){
-            print(x);
-        }
-    }
 }
+do{
+    print("A test");
+} while(x == 0)
 """
 
     cwd = os.getcwd() 
     #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
     drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
     AST = drewparser.program()
-
-    print(AST.toStringTree())
-
-    foo = 1
+    AST.toStringTree()

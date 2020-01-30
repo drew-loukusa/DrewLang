@@ -45,6 +45,7 @@ statement       :  ^ ( printstat
                 |  assignstat 
                 |  funcdef 
                 |  funccall 
+                |  dowhile
                 |  exprstat )
                 ;
 
@@ -53,7 +54,8 @@ printstat       : 'print' '(' expr ')' ';'          -> ^( 'print' expr )        
 ifstat          : 'if' '(' test ')' statement       -> ^( 'if' test statement )         ; 
 whilestat       : 'while' '(' test ')' statement    -> ^( 'while' test statement )      ;
 blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
-exprstat        : expr ';'                          -> ^( expr )                        ;   
+exprstat        : expr ';'                          -> ^( expr )                        ; 
+dowhile         : 'do' blockstat 'while' '(' test ')' -> ^( 'do' test blockstat )       ;
 
 expr            : term  ( ^ add_op term ) *                     ;
 term            : atom  ( ^ mult_op atom ) *                    ; 
@@ -121,6 +123,7 @@ DASH                    '-'
 FSLASH                  '/'
 BSLASH                  '\'
 IF                      'if' 
+DO                      'do' 
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
