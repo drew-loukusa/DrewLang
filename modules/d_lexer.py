@@ -28,8 +28,8 @@ if(x >= 0){
     if ( x == 0 ) print("Fuck yeah");
 }
 """
-    #lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\grammar_grammar.txt" ) 
-    lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\DrewGrammar.txt" ) 
+    #lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\docs\\grammar_grammar.txt" ) 
+    lexer = DLexer(input, "C:\\Users\\Drew\\Desktop\\Code Projects\\DrewLangPlayground\\DrewLang\\docs\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")

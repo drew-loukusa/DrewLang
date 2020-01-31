@@ -420,10 +420,10 @@ if(x >= 120){
     if ( x == 0 ) print("Aww yeah");    
 }
 """
-    import os; cwd = os.getcwd()
+    import os; cwd = os.getcwd()[:-8]
 
     #lexer = Lexer(input, cwd + "\\grammar_grammar.txt" ) 
-    lexer = Lexer(input, cwd + "\\DrewGrammar.txt" ) 
+    lexer = Lexer(input, cwd + "\\docs\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")

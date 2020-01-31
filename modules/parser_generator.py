@@ -728,10 +728,10 @@ class ParserGenerator( GrammarReader ):
 
 if __name__ == "__main__":
     import sys
-    cwd = os.getcwd()  
+    cwd = os.getcwd()[:-8] 
     
-    grammar_file =  cwd + "\\DrewGrammar.txt"
-    #grammar_file = cwd + "\\grammar_grammar.txt"
+    grammar_file =  cwd + "\\docs\\DrewGrammar.txt"
+    #grammar_file = cwd + "\\docs\\grammar_grammar.txt"
     g = ParserGenerator(grammar_file)
 
     g.dump(dump_rules=True, dump_predicates=True)
@@ -743,7 +743,7 @@ if __name__ == "__main__":
     
     code = g.generate_source_text(header, footer)
 
-    outpath = cwd+"\\modules\\gen_parser_test.py"
+    outpath = cwd+ "\\modules\\gen_parser_test.py"
     #outpath = cwd + "\\modules\\grammar_parser.py" 
 
     # Write code to file:

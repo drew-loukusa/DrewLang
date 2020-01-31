@@ -11,8 +11,8 @@ if(x==0){
 }
 """
 
-    cwd = os.getcwd() 
-    #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
-    drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
+    cwd = os.getcwd()[0:-8]
+    #drewparser = Parser(input, 2, cwd + "\\docs\\grammar_grammar.txt") 
+    drewparser = Parser(input, 2, cwd + "\\docs\\DrewGrammar.txt")
     AST = drewparser.program()
     AST.toStringTree()

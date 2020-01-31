@@ -300,9 +300,6 @@ if(x==0){
     print(x);
     x=1;
 }
-do{
-    print("A test");
-} while(x == 0)
 """
 
     cwd = os.getcwd() 
