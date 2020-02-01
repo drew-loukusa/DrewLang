@@ -208,10 +208,10 @@ class Parser:
         root = self.match('def')
         lnodes.append( self.match(self.input.NAME) )
         self.match('(')
-        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
-            lnodes.append( self.exprlist() )
+        if self.LA(1) == self.input.NAME:
+            lnodes.append( self.namelist() )
         self.match(')')
-        lnodes.append( self.statement() )
+        lnodes.append( self.blockstat() )
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -233,6 +233,16 @@ class Parser:
         while self.LA(1) == self.input.COMMA:
             self.match(',')
             lnodes.append( self.expr() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
+    
+    def namelist(self):
+        root, lnodes = None, []
+        root = AST(name='NAMELIST', artificial=True)
+        lnodes.append( self.match(self.input.NAME) )
+        while self.LA(1) == self.input.COMMA:
+            self.match(',')
+            lnodes.append( self.match(self.input.NAME) )
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -302,8 +312,8 @@ if(x==0){
 }
 """
 
-    cwd = os.getcwd() 
-    #drewparser = Parser(input, 2, cwd + "\\grammar_grammar.txt") 
-    drewparser = Parser(input, 2, cwd + "\\DrewGrammar.txt")
+    cwd = os.getcwd()[0:-8]
+    #drewparser = Parser(input, 2, cwd + "\\docs\\grammar_grammar.txt") 
+    drewparser = Parser(input, 2, cwd + "\\docs\\DrewGrammar.txt")
     AST = drewparser.program()
     AST.toStringTree()

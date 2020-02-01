@@ -23,9 +23,10 @@ term         : atom ( mult_op atom ) *                                          
 atom         : NAME | NUMBER | STRING | funccall                                ;
 test         : expr cmp_op expr                                                 ;
 
-funcdef      : 'def' NAME '(' exprlist ? ')' statement                          ;
+funcdef      : 'def' NAME '(' namelist ? ')' blockstat                          ;
 funccall     : NAME '(' exprlist ? ')' ';'                                      ;
 exprlist     : expr ( ',' expr ) *                                              ;
+namelist     : NAME ( ',' NAME ) *                                              ;
 
 cmp_op       : '==' | '>=' | '<=' | '>' | '<'                                   ;
 add_op       : '+' | '-'                                                        ;
@@ -62,9 +63,10 @@ term            : atom  ( ^ mult_op atom ) *                    ;
 atom            : ^ ( NAME |  NUMBER |  STRING |  funccall )    ;
 test            : expr ^ cmp_op expr                            ;
 
-funcdef         : 'def' NAME '(' exprlist ? ')' statement -> ^( 'def' NAME exprlist statement )  ;
-funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )       ;
-exprlist        : $EXPRLIST expr ( ',' expr ) *           -> ^( $EXPRLIST expr expr )      ; 
+funcdef         : 'def' NAME '(' namelist ? ')' blockstat -> ^( 'def' NAME namelist blockstat )  ;
+funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )             ;
+exprlist        : $EXPRLIST expr ( ',' expr ) *           -> ^( $EXPRLIST expr expr )       ; 
+namelist        : $NAMELIST NAME ( ',' NAME ) *           -> ^( $NAMELIST NAME NAME )       ;
 
 cmp_op          : ^ ( '==' |  '>=' |  '<=' |  '>' |  '<' )      ;
 add_op          : ^ ( '+' | '-' )                               ;

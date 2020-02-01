@@ -728,18 +728,28 @@ class ParserGenerator( GrammarReader ):
 
 if __name__ == "__main__":
     import sys
-    cwd = os.getcwd()[:-8] 
     
-    grammar_file =  cwd + "\\docs\\DrewGrammar.txt"
-    #grammar_file = cwd + "\\docs\\grammar_grammar.txt"
-    g = ParserGenerator(grammar_file)
+    grammar_file_name = "DrewGrammar.txt"
+
+    # Get path to grammar file: 
+    grammar_file_path = ""
+    for root, dirs, files in os.walk("C:\\Users"):
+        if root[-4:] == "docs":
+            for file in files:
+                if file == grammar_file_name:
+                    grammar_file_path = root + '\\' + file 
+
+    cwd = os.getcwd()
+    
+    #grammar_file = cwd + "docs\\grammar_grammar.txt"
+    g = ParserGenerator(grammar_file_path)
 
     g.dump(dump_rules=True, dump_predicates=True)
 
     #quit()
    
-    header = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_header.py")]
-    footer = [line.rstrip('\n') for line in open(cwd+"\\modules\\parser_gen_content\\parser_footer.py")]
+    header = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_header.py')]
+    footer = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_footer.py')]
     
     code = g.generate_source_text(header, footer)
 
