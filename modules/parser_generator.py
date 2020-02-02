@@ -4,6 +4,7 @@
 """
 
 import os
+import sys
 try:
     from lexer import Lexer
 except ImportError:
@@ -726,39 +727,47 @@ class ParserGenerator( GrammarReader ):
         self.source_code += footer
         return self.source_code
 
-if __name__ == "__main__":
-    import sys
+def main(grammar_file_name, parser_file_name):
+    from locate_file import check_cache_or_find
     
-    grammar_file_name = "DrewGrammar.txt"
-
     # Get path to grammar file: 
-    grammar_file_path = ""
-    for root, dirs, files in os.walk("C:\\Users"):
-        if root[-4:] == "docs":
-            for file in files:
-                if file == grammar_file_name:
-                    grammar_file_path = root + '\\' + file 
+    grammar_file_name = "DrewGrammar.txt"
+    grammar_file_path = check_cache_or_find(grammar_file_name, start_dir="C:\\Users", path_cache_file="paths.txt")
 
     cwd = os.getcwd()
-    
-    #grammar_file = cwd + "docs\\grammar_grammar.txt"
+
     g = ParserGenerator(grammar_file_path)
 
     g.dump(dump_rules=True, dump_predicates=True)
 
-    #quit()
-   
     header = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_header.py')]
     footer = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_footer.py')]
     
     code = g.generate_source_text(header, footer)
 
-    outpath = cwd+ "\\modules\\gen_parser_test.py"
-    #outpath = cwd + "\\modules\\grammar_parser.py" 
+    outpath = cwd+ f"\\modules\\{parser_file_name}"  
 
     # Write code to file:
     # --------------------------------------------------
     with open(outpath, mode='w') as f:
         for line in code: f.write(line+'\n')
 
-    #for line in code: print(line)
+if __name__ == "__main__":
+    args = sys.argv
+
+    # TODO: Implement better args (using argparse lib)
+    grammar_file_name = ""
+    parser_file_name  = ""
+
+    if len(args) == 3:
+        grammar_file_name = args[0]
+        parser_file_name = args[1]
+
+    if len(args) == 1:
+        grammar_file_name = "DrewGrammar.txt"
+        parser_file_name = "DrewGrammarParser.py"
+
+        #grammar_file_name = "grammar_grammar.txt"
+        #parser_file_name = "grammar_parser.py" 
+
+    main(grammar_file_name, parser_file_name)
