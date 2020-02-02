@@ -15,6 +15,22 @@ def find(file_name, start_dir) -> str:
             if file == file_name:
                 return root + '\\' + file 
 
+
+def find_dir(dir_name, start_dir) -> str:
+    """ Searches for dir named 'dir_name' starting in directory 'dir'.
+        Will search current directory and all directories under current directory for file.
+
+        Does not follow symbolic links.
+
+        @Return:
+            Absolute path to dir -> If dir exists
+            None -> If dir does not exist. 
+    """
+    for root, dirs, files in os.walk(start_dir):
+        for dir in dirs:
+            if dir == dir_name:
+                return root + '\\' + dir 
+
 def get_path_from_cache(file_name, path_cache_file):
     
     try:    
@@ -48,3 +64,6 @@ def check_cache_or_find(file_name, start_dir, path_cache_file) -> str:
         open(path_cache_file, mode='w').write(file_name + '; ' + file_path)            
 
     return file_path
+
+if __name__ == '__main__':
+    print(find_dir('modules', start_dir=os.getcwd()))

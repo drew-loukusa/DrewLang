@@ -728,7 +728,7 @@ class ParserGenerator( GrammarReader ):
         return self.source_code
 
 def main(grammar_file_name, parser_file_name):
-    from locate_file import check_cache_or_find
+    from locate_file import check_cache_or_find, find, find_dir
     
     # Get path to grammar file: 
     grammar_file_name = "DrewGrammar.txt"
@@ -740,12 +740,12 @@ def main(grammar_file_name, parser_file_name):
 
     g.dump(dump_rules=True, dump_predicates=True)
 
-    header = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_header.py')]
-    footer = [line.rstrip('\n') for line in open(cwd+r'\modules\parser_gen_content\parser_footer.py')]
+    header = [line.rstrip('\n') for line in open(find('parser_header.py', start_dir=os.getcwd()))]
+    footer = [line.rstrip('\n') for line in open(find('parser_footer.py', start_dir=os.getcwd()))]
     
     code = g.generate_source_text(header, footer)
 
-    outpath = cwd+ f"\\modules\\{parser_file_name}"  
+    outpath = find_dir("modules", start_dir=os.getcwd()) + parser_file_name
 
     # Write code to file:
     # --------------------------------------------------
@@ -765,7 +765,7 @@ if __name__ == "__main__":
 
     if len(args) == 1:
         grammar_file_name = "DrewGrammar.txt"
-        parser_file_name = "DrewGrammarParser.py"
+        parser_file_name = "DrewParser.py"
 
         #grammar_file_name = "grammar_grammar.txt"
         #parser_file_name = "grammar_parser.py" 
