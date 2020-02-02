@@ -734,8 +734,6 @@ def main(grammar_file_name, parser_file_name):
     grammar_file_name = "DrewGrammar.txt"
     grammar_file_path = check_cache_or_find(grammar_file_name, start_dir="C:\\Users", path_cache_file="paths.txt")
 
-    cwd = os.getcwd()
-
     g = ParserGenerator(grammar_file_path)
 
     g.dump(dump_rules=True, dump_predicates=True)
@@ -771,5 +769,3 @@ if __name__ == "__main__":
         #parser_file_name = "grammar_parser.py" 
 
     main(grammar_file_name, parser_file_name)
-
-    # comment
