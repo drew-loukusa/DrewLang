@@ -47,21 +47,25 @@ statement       :  ^ ( printstat
                 |  funcdef 
                 |  funccall 
                 |  dowhile
+                |  classdef 
                 |  exprstat )
                 ;
 
 assignstat      : NAME '=' expr ';'                 -> ^( '=' NAME expr )               ; 
+blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
 printstat       : 'print' '(' expr ')' ';'          -> ^( 'print' expr )                ;
 ifstat          : 'if' '(' test ')' statement       -> ^( 'if' test statement )         ; 
 whilestat       : 'while' '(' test ')' statement    -> ^( 'while' test statement )      ;
-blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
-exprstat        : expr ';'                          -> ^( expr )                        ; 
 dowhile         : 'do' blockstat 'while' '(' test ')' -> ^( 'do' test blockstat )       ;
+exprstat        : expr ';'                          -> ^( expr )                        ; 
+classdef        : ^ 'class' NAME blockstat                                              ;
 
-expr            : term  ( ^ add_op term ) *                     ;
-term            : atom  ( ^ mult_op atom ) *                    ; 
-atom            : ^ ( NAME |  NUMBER |  STRING |  funccall )    ;
-test            : expr ^ cmp_op expr                            ;
+expr            : term  ( ^ add_op term ) *                                 ;
+term            : atom  ( ^ mult_op atom ) *                                ; 
+atom            : ^ ( NAME |  NUMBER |  STRING |  funccall | dotexpr )      ;
+test            : expr ^ cmp_op expr                                        ;
+
+dotexpr         : NAME ^ '.' ( NAME | funccall )                            ;
 
 funcdef         : 'def' NAME '(' namelist ? ')' blockstat -> ^( 'def' NAME namelist blockstat )  ;
 funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )             ;
@@ -129,6 +133,7 @@ DO                      'do'
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
+CLASS                   'class'
 NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
 NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
 STRING                  NON_PRE_DEF     '"' . * '"'              

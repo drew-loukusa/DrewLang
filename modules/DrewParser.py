@@ -37,7 +37,7 @@ class Parser:
     def program(self):
         root, lnodes = None, []
         root = AST(name='PROGRAM', artificial=True)
-        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.DO or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+        while self.LA(1) == self.input.PRINT or self.LA(1) == self.input.LCURBRACK or self.LA(1) == self.input.IF or self.LA(1) == self.input.WHILE or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.EQUALS)  or self.LA(1) == self.input.DEF or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.DO or self.LA(1) == self.input.CLASS or self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME:
             lnodes.append( self.statement() )
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
@@ -76,7 +76,11 @@ class Parser:
             temp = root
             root = self.dowhile()
             if temp: root.addChild(temp) 
-        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+        elif self.LA(1) == self.input.CLASS:
+            temp = root
+            root = self.classdef()
+            if temp: root.addChild(temp) 
+        elif self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME:
             temp = root
             root = self.exprstat()
             if temp: root.addChild(temp) 
@@ -90,6 +94,16 @@ class Parser:
         root = self.match('=')
         lnodes.append( self.expr() )
         self.match(';')
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
+    
+    def blockstat(self):
+        root, lnodes = None, []
+        root = AST(name='BLOCKSTAT', artificial=True)
+        self.match('{')
+        while self.LA(1) != self.input.RCURBRACK:
+            lnodes.append( self.statement() )
+        self.match('}')
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -123,13 +137,14 @@ class Parser:
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
-    def blockstat(self):
+    def dowhile(self):
         root, lnodes = None, []
-        root = AST(name='BLOCKSTAT', artificial=True)
-        self.match('{')
-        while self.LA(1) != self.input.RCURBRACK:
-            lnodes.append( self.statement() )
-        self.match('}')
+        root = self.match('do')
+        lnodes.append( self.blockstat() )
+        self.match('while')
+        self.match('(')
+        lnodes.append( self.test() )
+        self.match(')')
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -140,14 +155,11 @@ class Parser:
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
-    def dowhile(self):
+    def classdef(self):
         root, lnodes = None, []
-        root = self.match('do')
+        root = self.match('class')
+        lnodes.append( self.match(self.input.NAME) )
         lnodes.append( self.blockstat() )
-        self.match('while')
-        self.match('(')
-        lnodes.append( self.test() )
-        self.match(')')
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -191,6 +203,10 @@ class Parser:
             temp = root
             root = self.funccall()
             if temp: root.addChild(temp) 
+        elif self.LA(1) == self.input.NAME:
+            temp = root
+            root = self.dotexpr()
+            if temp: root.addChild(temp) 
         else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
@@ -200,6 +216,18 @@ class Parser:
         lnodes.append( self.expr() )
         root = self.cmp_op()
         lnodes.append( self.expr() )
+        if root: root.children.extend(lnodes); return root
+        else: return lnodes[0]
+    
+    def dotexpr(self):
+        root, lnodes = None, []
+        lnodes.append( self.match(self.input.NAME) )
+        root = self.match('.')
+        if self.LA(1) == self.input.NAME:
+            lnodes.append( self.match(self.input.NAME) )
+        elif  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+            lnodes.append( self.funccall() )
+        else: raise Exception(f"Expecting something; found {self.LT(1)} on Line {self.LT(1)._line_number}.")
         if root: root.children.extend(lnodes); return root
         else: return lnodes[0]
     
@@ -219,7 +247,7 @@ class Parser:
         root, lnodes = None, []
         root = self.match(self.input.NAME)
         self.match('(')
-        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN) :
+        if self.LA(1) == self.input.NAME or self.LA(1) == self.input.NUMBER or self.LA(1) == self.input.STRING or  (self.LA(1) == self.input.NAME and self.LA(2) == self.input.LPAREN)  or self.LA(1) == self.input.NAME:
             lnodes.append( self.exprlist() )
         self.match(')')
         self.match(';')

@@ -743,7 +743,7 @@ def main(grammar_file_name, parser_file_name):
     
     code = g.generate_source_text(header, footer)
 
-    outpath = find_dir("modules", start_dir=os.getcwd()) + parser_file_name
+    outpath = find_dir("modules", start_dir=os.getcwd()) + "\\" + parser_file_name
 
     # Write code to file:
     # --------------------------------------------------
