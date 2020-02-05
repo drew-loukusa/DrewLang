@@ -38,6 +38,10 @@ END
 
 AST
 
+# Terminals that start with a '$' character are artificial AST nodes;
+# Those rules either don't have an item that makes sense to make into the root node, 
+# or by having an artifical AST node as root, it makes later stages easier to code.
+
 program         : ^ $PROGRAM statement *    ; 
 statement       :  ^ ( printstat 
                 |  blockstat 
@@ -67,10 +71,10 @@ test            : expr ^ cmp_op expr                                        ;
 
 dotexpr         : NAME ^ '.' ( NAME | funccall )                            ;
 
-funcdef         : $FUNCDEF 'def' NAME '(' namelist ? ')' blockstat -> ^( $FUNCDEF NAME namelist blockstat )  ;
-funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )             ;
-exprlist        : $EXPRLIST expr ( ',' expr ) *           -> ^( $EXPRLIST expr expr )       ; 
-namelist        : $NAMELIST NAME ( ',' NAME ) *           -> ^( $NAMELIST NAME NAME )       ;
+funcdef         : $FUNCDEF 'def' NAME '(' namelist ? ')' blockstat  -> ^( $FUNCDEF NAME namelist blockstat )  ;
+funccall        : NAME '(' exprlist ? ')' ';'                       -> ^( NAME exprlist )             ;
+exprlist        : $EXPRLIST expr ( ',' expr ) *                     -> ^( $EXPRLIST expr expr )       ; 
+namelist        : $NAMELIST NAME ( ',' NAME ) *                     -> ^( $NAMELIST NAME NAME )       ;
 
 cmp_op          : ^ ( '==' |  '>=' |  '<=' |  '>' |  '<' )      ;
 add_op          : ^ ( '+' | '-' )                               ;
