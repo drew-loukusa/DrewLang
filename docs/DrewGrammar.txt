@@ -1,5 +1,5 @@
 GRAMMAR 
-
+# This is out of date at the moment. See AST for the up-to-date gramamr.
 program      : statement *                                                     ;
 statement    : printstat           
              | blockstat   
@@ -51,14 +51,14 @@ statement       :  ^ ( printstat
                 |  exprstat )
                 ;
 
-assignstat      : NAME '=' expr ';'                 -> ^( '=' NAME expr )               ; 
-blockstat       : $BLOCKSTAT '{' statement *  '}'   -> ^( $BLOCKSTAT statement )        ; 
-printstat       : 'print' '(' expr ')' ';'          -> ^( 'print' expr )                ;
-ifstat          : 'if' '(' test ')' statement       -> ^( 'if' test statement )         ; 
-whilestat       : 'while' '(' test ')' statement    -> ^( 'while' test statement )      ;
-dowhile         : 'do' blockstat 'while' '(' test ')' -> ^( 'do' test blockstat )       ;
-exprstat        : expr ';'                          -> ^( expr )                        ; 
-classdef        : ^ 'class' NAME blockstat                                              ;
+assignstat      : NAME '=' expr ';'                     -> ^( '=' NAME expr )               ; 
+blockstat       : $BLOCKSTAT '{' statement *  '}'       -> ^( $BLOCKSTAT statement )        ; 
+printstat       : 'print' '(' expr ')' ';'              -> ^( 'print' expr )                ;
+ifstat          : 'if' '(' test ')' statement           -> ^( 'if' test statement )         ; 
+whilestat       : 'while' '(' test ')' statement        -> ^( 'while' test statement )      ;
+dowhile         : 'do' blockstat 'while' '(' test ')'   -> ^( 'do' test blockstat )         ;
+exprstat        : expr ';'                              -> ^( expr )                        ; 
+classdef        : ^ 'class' NAME blockstat                                                  ;
 
 expr            : term  ( ^ add_op term ) *                                 ;
 term            : atom  ( ^ mult_op atom ) *                                ; 
@@ -67,7 +67,7 @@ test            : expr ^ cmp_op expr                                        ;
 
 dotexpr         : NAME ^ '.' ( NAME | funccall )                            ;
 
-funcdef         : 'def' NAME '(' namelist ? ')' blockstat -> ^( 'def' NAME namelist blockstat )  ;
+funcdef         : $FUNCDEF 'def' NAME '(' namelist ? ')' blockstat -> ^( $FUNCDEF NAME namelist blockstat )  ;
 funccall        : NAME '(' exprlist ? ')' ';'             -> ^( NAME exprlist )             ;
 exprlist        : $EXPRLIST expr ( ',' expr ) *           -> ^( $EXPRLIST expr expr )       ; 
 namelist        : $NAMELIST NAME ( ',' NAME ) *           -> ^( $NAMELIST NAME NAME )       ;

@@ -427,7 +427,10 @@ class GrammarReader:
         with open(grammar_file_path) as f:
             
             def goto_section(start_string):
-                while start_string not in f.readline(): pass                
+                while True:
+                    line = f.readline()                
+                    if line[0] == '#': continue
+                    if start_string in line: break
 
             # Read in the rules:
             # ------------------------------------------------------------------
@@ -645,6 +648,9 @@ class ParserGenerator( GrammarReader ):
 
                 self.add_line(new_text, ltab)
 
+                if child.is_root: 
+                    self.add_line(f"root.name = \"{child.name}\"", ltab)
+
                 if child.is_root and tab > 2:  
                     self.add_line("if temp: root.addChild(temp) ", tab)
             
@@ -720,10 +726,12 @@ class ParserGenerator( GrammarReader ):
             # Generate the function body for a rules function.
             for child in rule.nodes:
                 gen_func_body_statement(child, tab)
-
-            self.add_line("if root: root.children.extend(lnodes); return root", tab)
+            
+            self.add_line("if root:", tab)
+            self.add_line("root.children.extend(lnodes)", tab+1)            
+            self.add_line("return root", tab+1)
             self.add_line("else: return lnodes[0]", tab)
-        
+
         self.source_code += footer
         return self.source_code
 

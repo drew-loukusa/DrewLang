@@ -16,15 +16,24 @@ class AST:
     def addChild(self, t): self.children.append(t)
 
     def toString(self):
-        return str(self.token) if self.token is not None else "None"
+        foo = str(self.token) if self.token is not None else "None"
+        foo = self.name + str(self.token) if self.name is not None else foo 
+
+        if self.artificial: 
+            foo = 'ARTIFICIAL - ' + foo 
+
+        return foo
 
     def toStringTree(self, tab=0):
         if len(self.children) == 0: 
-            print('--'*tab + self.toString())
+            print('| '*tab + self.toString())
             return
 
         if not self.isNone(): 
-            print('--'*tab + f"{self.toString()}")
+            print('| '*tab + f"{self.toString()}")
+
+        elif self.isNone() and self.artificial:
+            print('| '*tab + f"{self.toString()}")
         
         for child in self.children:
             child.toStringTree(tab+1)
