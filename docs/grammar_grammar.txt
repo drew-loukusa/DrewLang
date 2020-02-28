@@ -14,7 +14,7 @@ RANGE               : . '..' .                                  ;
 
 NAME                : a..z +                                    ;
 
-PREDICATES: 
+LOOKAHEAD_SETS:
 
 NAME        ->  NAME
 COMMENT     ->  COMMENT
@@ -37,7 +37,9 @@ RBRACK                  ']'
 SEMICOLON               ';'
 COLON                   ':'
 EQUALS                  '='
-DEQUALS                 '=='  
+DEQUALS                 '==' 
+ARROW                   '->' 
+AST_REWRITE             '^(' 
 QUOTE                   "'"
 DQUOTE                  '"'
 STAR                    '*'
@@ -48,8 +50,7 @@ BSLASH                  '\'
 TILDE                   '~'
 WILDCARD                '.'
 RANGE                   '..'
-NAME                    NON_PRE_DEF
-NUMBER                  NON_PRE_DEF
-STRING                NON_PRE_DEF
-#COMMENT                NON_PRE_DEF
+NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
+NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
+STRING                  NON_PRE_DEF     '"' . * '"'              
 END

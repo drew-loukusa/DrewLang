@@ -1,4 +1,4 @@
-GRAMMAR 
+GRAMMAR:
 # This is out of date at the moment. See AST for the up-to-date gramamr.
 program      : statement *                                                     ;
 statement    : printstat           
@@ -36,7 +36,7 @@ END
 
 # ---------------------------------------------------------------------------
 
-AST
+AST:
 
 # Terminals that start with a '$' character are artificial AST nodes;
 # Those rules either don't have an item that makes sense to make into the root node, 
@@ -93,7 +93,7 @@ END
 
 # -----------------------------------------------------------------
 
-PREDICATES 
+LOOKAHEAD_SETS:
 
 #namelist -> NAME
 assignstat -> NAME&EQUALS

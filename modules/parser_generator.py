@@ -10,18 +10,18 @@ try:
 except ImportError:
     pass
 
+from locate_file import check_cache_or_find, find, find_dir
+
 class RuleToken:
     RULE_NAME = 0
     NON_TERMINAL = 1
     TERMINAL = 2
-    MODIFIER = 3
-    MODIFIER_INFO = 4
-    LPAREN = 5
-    RPAREN = 6
-    SUB_RULE = 7
+    MODIFIER = 3    
+    LPAREN = 4
+    RPAREN = 5
+    SUB_RULE = 6
 
-    type_names = [  "RULE_NAME","NON_TERMINAL","TERMINAL","MODIFIER",
-                    "MODIFIER_INFO", "LPAREN", "RPAREN", "SUB_RULE"]
+    type_names = [  "RULE_NAME","NON_TERMINAL","TERMINAL","MODIFIER", "LPAREN", "RPAREN", "SUB_RULE"]
 
     def __init__(self, rule_token_type, text):
         self.type = rule_token_type
@@ -60,8 +60,8 @@ class GrammarReader:
 
     When creating an instance of this class, you must pass in the file path of your grammar file.
 
-    self.__init__() will call self._read_rules_predicates() to load in the rules as lists of rule_tokens
-    and predicates as a dict.
+    self.__init__() will call self._read_rules_lookahead_sets() to load in the rules as lists of rule_tokens
+    and lookahead_sets as a dict.
 
     Then, self.__init_() calls self._build_rules_from_RuleTokens() which will fill self.rules (a list) with Nodes.
 
@@ -71,8 +71,7 @@ class GrammarReader:
     For each Node in a rules 'definition' list, that Node could be one of several types: 
 
             NON_TERMINAL    ;       These are nodes containg only 'name' and 'type'. 
-            TERMINAL        ;       
-            MODIFIER_INFO   ;
+            TERMINAL        ;                   
 
 
             MODIFIER        ;       These nodes have 'name' 'type' AND their own list of nodes           
@@ -81,11 +80,13 @@ class GrammarReader:
     """ 
 
     def __init__(self, grammar_file_path="", mode=''):
+        self.meta_grammar_fpath = check_cache_or_find("grammar_grammar.txt", \
+                            start_dir="C:\\Users", path_cache_file="paths.txt")
         self.grammar_file_path = grammar_file_path
         self.rules = []         # List of rules (nodes) 
         self.rules_dict = {}    # The same rules, but stored as a dict:  { rule_name -> rule (Node) }
         self.rule_tokens = []   # List of RuleToken lists
-        self.predicates = {}    # Dict of rule_name -> what token predicts said rule
+        self.lookahead_sets = {}    # Dict of rule_name -> what token(s) predicts said rule
 
         self.prefix_mods   = ['^', '~']
         self.infix_mods    = ['|', '..']
@@ -94,9 +95,9 @@ class GrammarReader:
         self.modifiers = self.prefix_mods + self.infix_mods + self.postfix_mods 
 
         if mode == 'rule':
-            self._read_rules_and_predicates(grammar_file_path) # Fills self.rule_tokens and self.predicates            
+            self._read_rules_and_lookahead_sets(grammar_file_path) # Fills self.rule_tokens and self.lookahead_sets            
             self._build_rules_from_RuleTokens() # Fills self.rules        
-            self._generate_predicates()
+            self._generate_lookahead_sets()
 
     def read_tokens(self, fpath):
         lines = []
@@ -125,7 +126,7 @@ class GrammarReader:
        
         return token_defs
 
-    def dump(self, dump_rules=False, dump_rule_tokens=False, dump_predicates=False):
+    def dump(self, dump_rules=False, dump_rule_tokens=False, dump_lookahead_sets=False):
         """ 
             Dumps the contents of ParserGenerators data stores.
             Enable the ones you want to dump by setting their named parameters to true.
@@ -138,10 +139,10 @@ class GrammarReader:
                     print(token, ' ', end='')
                 print()
 
-        if dump_predicates: 
+        if dump_lookahead_sets: 
             print('-'*40)
-            print("Predicates:")
-            for k,v in self.predicates.items(): print(k,v)
+            print("lookahead_sets:")
+            for k,v in self.lookahead_sets.items(): print(k,v)
 
         if dump_rules:
             print('-'*40)
@@ -381,13 +382,21 @@ class GrammarReader:
 
         rule_tokens = []
 
+        input = " " # Should be a string, pass in a string instead of 'tokens'
+
+        # Create a lexer for lexing rules using the token definitons defined in the meta grammar:
+        rules_lexer = Lexer(input, self.meta_grammar_fpath)
+
         # Process rule name and ':':
         if mode == 'rule':
-            rule_tokens.append(RuleToken(RuleToken.RULE_NAME, tokens[0]))
-            tokens.pop(0)
-            tokens.pop(0)
+            rule_tokens.append(RuleToken(RuleToken.RULE_NAME, rules_lexer.nextToken()._text))
+            
+            rules_lexer.nextToken() # Skip over ':' 
+            
 
-        for lexical_token in tokens:            
+        #for lexical_token in tokens:            
+        while (lexical_token := rules_lexer.nextToken()._text) != ';':
+
             if lexical_token == ';': 
                 break # ';' signifies the end of the rule
             
@@ -405,8 +414,6 @@ class GrammarReader:
                 token_type = RuleToken.MODIFIER
 
             # Process modifer info lexical_token;
-            elif len(lexical_token) >= 3 and lexical_token[0:3] == 'end':
-                token_type =RuleToken.MODIFIER_INFO
             else:                   
                 token_type = RuleToken.NON_TERMINAL
 
@@ -415,14 +422,14 @@ class GrammarReader:
 
         return rule_tokens
 
-    def _read_rules_and_predicates(self, grammar_file_path):
+    def _read_rules_and_lookahead_sets(self, grammar_file_path):
 
         """ This function opens the grammar file located at 'grammar_file_path' and reads
-            in the rules and predicates.
+            in the rules and lookahead_sets.
             
             @ Return:
             rule_tokens - A list of rule_token lists, one per rule
-            predicates  - A dict of rule_name to it's predictor (lexical token) - These are auto-generated now?
+            lookahead_sets  - A dict of rule_name to it's predictor (lexical token) - These are auto-generated now?
         """        
         with open(grammar_file_path) as f:
             
@@ -451,15 +458,11 @@ class GrammarReader:
                     tokens = []
 
            
-            # Read in predicates: 
+            # Read in lookahead_sets: 
             # ------------------------------------------------------------------
-            # (Pre-written predicates are for rules which require 2 tokens of look ahead)
-            """ I use what I'm terming 'predicates' to help generate source code. 
-                They're not strictly necessary, and I will probably revise
-                my generator so that it can extract that info from the grammar itself,
-                but for now I have them as their own section in the grammar file.       
-            """
-            goto_section("PREDICATES")
+            # (Pre-written lookahead_sets are for rules which require 2 tokens of look ahead)
+            
+            goto_section("LOOKAHEAD_SETS")
             tokens = []
             while "END" not in (line := f.readline()):
                 # Ignore comments and blank lines:
@@ -468,14 +471,14 @@ class GrammarReader:
                 tokens = line.split()
 
                 rule_name, predictor = tokens[0], tokens[2]
-                self.predicates[rule_name] = predictor
+                self.lookahead_sets[rule_name] = predictor
 
-    def _generate_predicates(self):
+    def _generate_lookahead_sets(self):
         # ------------------------------------------------------------------
-        # Generate predicates from rules:
+        # Generate lookahead_sets from rules:
         lex = Lexer("test", self.grammar_file_path) # Create lexer so we can use DLexer.getTokenNameFromText
       
-        self.rules.reverse()         # Build predicates bottom up 
+        self.rules.reverse()         # Build lookahead_sets bottom up 
 
         def build_predicate_text(node):             
             #print('(', node.name, ',', end='')
@@ -491,16 +494,16 @@ class GrammarReader:
                      
             result = lex.getTokenNameFromText( name ) 
             if result == "NOT_A_TOKEN": 
-                if result not in self.predicates: 
+                if result not in self.lookahead_sets: 
                     build_predicate(self.rules_dict[name])
-                return self.predicates[name]
+                return self.lookahead_sets[name]
             else: return result
 
         def build_predicate(rule):
             #print("Building predicate for:", rule.name)
             if rule.name in ("program","NAME", "NUMBER"): return  
 
-            if rule.name in self.predicates: return         
+            if rule.name in self.lookahead_sets: return         
             
             name = rule.name 
             fnode = rule.nodes[0]
@@ -524,8 +527,8 @@ class GrammarReader:
             
             # Temporary........................................... see init in lexer? for info
             if name == "STRING": predictor = 'STRING'
-            self.predicates[name] = predictor
-            #print("Preds:", self.predicates)
+            self.lookahead_sets[name] = predictor
+            #print("Preds:", self.lookahead_sets)
 
         for rule in self.rules: 
             build_predicate(rule)
@@ -534,7 +537,7 @@ class GrammarReader:
             key = token_text
             #if token_text not in ["NAME", "NUMBER", "STRING"]: # Give quotes to terminals
                 #key = "'" + token_text + "'"
-            self.predicates[key] = lex.getTokenNameFromText(token_text)
+            self.lookahead_sets[key] = lex.getTokenNameFromText(token_text)
 
         self.rules.reverse()
 
@@ -554,7 +557,7 @@ class ParserGenerator( GrammarReader ):
         """ Returns a complete if/elif/while statement """
         predictor = []
         name = self._strip_quotes(token.name)                
-        predictor = self.predicates[name]         
+        predictor = self.lookahead_sets[name]         
 
         """ 
         'predictor' is an auto-generated string which describes the lookahead "set" of given rule.
@@ -576,7 +579,7 @@ class ParserGenerator( GrammarReader ):
         
         if keyword == 'while' and end_conditon:
             name = self._strip_quotes(end_conditon.name)
-            preds = [self.predicates[name]]    
+            preds = [self.lookahead_sets[name]]    
             comp_op = '!='    
 
         # Construct a test statement using the look ahead set for the given rule we might want to parse:
@@ -599,7 +602,7 @@ class ParserGenerator( GrammarReader ):
         self.source_code.append('    '*tab+text)
 
     def generate_source_text(self, header, footer): 
-        """ Using self.rule_tokens and self.predicates, generates python parser code.
+        """ Using self.rule_tokens and self.lookahead_sets, generates python parser code.
             @Return: A list of strings which make up the python parser code
         """        
         self.source_code += header
@@ -736,7 +739,6 @@ class ParserGenerator( GrammarReader ):
         return self.source_code
 
 def main(grammar_file_name, parser_file_name):
-    from locate_file import check_cache_or_find, find, find_dir
     
     # Get path to grammar file: 
     grammar_file_name = "DrewGrammar.txt"
@@ -744,7 +746,7 @@ def main(grammar_file_name, parser_file_name):
 
     g = ParserGenerator(grammar_file_path)
 
-    g.dump(dump_rules=True, dump_predicates=True)
+    g.dump(dump_rules=True, dump_lookahead_sets=True)
 
     header = [line.rstrip('\n') for line in open(find('parser_header.py', start_dir=os.getcwd()))]
     footer = [line.rstrip('\n') for line in open(find('parser_footer.py', start_dir=os.getcwd()))]
