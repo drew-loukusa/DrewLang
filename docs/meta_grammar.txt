@@ -23,6 +23,7 @@ STRING      ->  STRING
 END
 
 TOKENS:
+AST_ROOT                '^'
 OR                      '|'
 AND                     '&'
 QMARK                   '?'
@@ -40,8 +41,8 @@ EQUALS                  '='
 DEQUALS                 '==' 
 ARROW                   '->' 
 AST_REWRITE             '^(' 
-QUOTE                   "'"
-DQUOTE                  '"'
+#QUOTE                   "'"
+#DQUOTE                  '"'
 STAR                    '*'
 PLUS                    '+'
 DASH                    '-'
@@ -50,7 +51,9 @@ BSLASH                  '\'
 TILDE                   '~'
 WILDCARD                '.'
 RANGE                   '..'
-NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
-NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
-STRING                  NON_PRE_DEF     '"' . * '"'              
+RULE                    re([a-z]+)
+NUMBER                  re(0-9]+)
+TERMINAL                re([A-Z]+)
+ARTIFICAL_NODE          re(^\$[A-Z]+)
+QUOTED_TERMINAL         re('[^']+')
 END

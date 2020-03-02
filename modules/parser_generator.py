@@ -5,11 +5,7 @@
 
 import os
 import sys
-try:
-    from lexer import Lexer
-except ImportError:
-    pass
-
+from lexer import Lexer
 from locate_file import check_cache_or_find, find, find_dir
 
 class RuleToken:
@@ -80,7 +76,7 @@ class GrammarReader:
     """ 
 
     def __init__(self, grammar_file_path="", mode=''):
-        self.meta_grammar_fpath = check_cache_or_find("grammar_grammar.txt", \
+        self.meta_grammar_fpath = check_cache_or_find("meta_grammar.txt", \
                             start_dir="C:\\Users", path_cache_file="paths.txt")
         self.grammar_file_path = grammar_file_path
         self.rules = []         # List of rules (nodes) 
@@ -384,7 +380,7 @@ class GrammarReader:
 
         input = " " # Should be a string, pass in a string instead of 'tokens'
 
-        # Create a lexer for lexing rules using the token definitons defined in the meta grammar:
+        # Create a lexer for lexing rules using the token definitons defined in the meta grammar:        
         rules_lexer = Lexer(input, self.meta_grammar_fpath)
 
         # Process rule name and ':':
@@ -450,7 +446,10 @@ class GrammarReader:
                 
                 # Probably should not lex the line using str.split(), 
                 # but it WORKS FOR NOW:
-                tokens += (line.split())
+                
+                #tokens += (line.split())
+                # NOTE: Testing using lexer inside _convert_text_to_RuleTokens:
+                tokens = line 
                 
                 # Once we've collected a rules worth of tokens, process the rule:
                 if tokens[-1] == ';': 
@@ -775,7 +774,7 @@ if __name__ == "__main__":
         grammar_file_name = "DrewGrammar.txt"
         parser_file_name = "DrewParser.py"
 
-        #grammar_file_name = "grammar_grammar.txt"
+        #grammar_file_name = "meta_grammar.txt"
         #parser_file_name = "grammar_parser.py" 
 
     main(grammar_file_name, parser_file_name)

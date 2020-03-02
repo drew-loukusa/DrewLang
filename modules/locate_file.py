@@ -57,6 +57,7 @@ def check_cache_or_find(file_name, start_dir, path_cache_file) -> str:
         If not, it finds the correct path, updates the cache, and returns the path.
     """
     file_path, path_cache_file = get_path_from_cache(file_name, path_cache_file)
+    file_path = file_path.rstrip('\n')
     try: 
         open(file_path, mode='r')
     except FileNotFoundError:
