@@ -20,11 +20,22 @@ Current TODO:
 *   Think about: Currently I'm using these RuleTokens in a weird way. They don't entirely
     define the meta-tokens, as in there is not a RuleToken equivelant for each defined 
     meta-token, but I am using the RuleTokens to build the grammar data structure. 
-    
+
+    NOTE: Consider NOT doing this since you might be able to use this very parser_generator
+          to construct a new backend for said parser_generator. Maybe flesh out your meta-grammar,
+          then use it to make a meta-grammar-parser which you plug into the parser_generator. 
+          We'll see I guess. 
+
     So, they are serving the purpose of lexical tokens. I need to look at improving 
     RuleTokens to better match the meta-token defs? 
 
     Biggest thing: Look at how you're using them, come up with possible re-factoring plan.
+
+*   In your lexer you currently iterate through all multi_char_lexers to find the appropriate 
+    multi char lexer. This is ineffecient. You should add a class field, a dict of some sort, 
+    that maps start_sets -> mult_char_lexer. Tokens that share starting chars would be in the 
+    same list. Worst case you have to iterate through several to find the correct one, but 
+    that's better than the current solution of iterating through ALL of them everytime. 
 
 AST Todo:
 

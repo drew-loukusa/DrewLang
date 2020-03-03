@@ -83,13 +83,10 @@ mult_op         : ^ ( '*' | '/' )                               ;
 END
 
 # Map rule_name to the token_name that predicts said rule:
-# I auto-generate most predicates, it would be nice to have that for ALL predicates.
-# These are still hand-written beacuse my code can't yet calculate when rules will have 
-# conflicting look-ahead sets, i.e. two rules are predicted by the same start token.
-# I will improve my code at a later date to take care of this.
-
-# Also, I have tokens in here? Do I need those anymore ? 
-
+# I auto-generate most look ahead sets, it would be nice to have that for ALL 
+# look ahead sets.These are still hand-written beacuse my code can't yet calculate 
+# when rules will have conflicting look-ahead sets, i.e. two rules are predicted by 
+# the same start token. I will improve my code at a later date to take care of this.
 
 # -----------------------------------------------------------------
 
@@ -107,7 +104,7 @@ funccall -> NAME&LPAREN
 END
 
 TOKENS: 
-# Name of token:      Token Text:
+# Name of token:      Token Text:           # 
 #---------------------------------
 COMMA                   ','
 PERIOD                  '.'

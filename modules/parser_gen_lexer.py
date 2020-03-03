@@ -25,7 +25,6 @@ class Lexer:
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
 
-
     # TODO: Make the lexer accept a list of tuples
     #       Each tuple is THREE funcs: 
     #                                   start_of_sequence, 
@@ -47,7 +46,7 @@ class Lexer:
 
         # Read in token definitions from file:
         # ---------------------------------------------------------------------
-        token_defs = self.read_tokens(fpath)
+        self.token_defs = {} ; self._read_tokens(fpath)
 
         self.line_num = 0    # Used when syntax errors arise to return problem char location to user 
         self.char_pos = 0
@@ -62,42 +61,77 @@ class Lexer:
         # Build out attributes, a list of token names, and a  
         # dict of char to token name from the symbols dict:
         # ---------------------------------------------------------------------
-        for i, name in enumerate(token_defs, start=2):        
-            defn = token_defs[name]
+        self._generate_attrs_and_fill_class_data()
+      
+    def _generate_attrs_and_fill_class_data(self):
+        for i, name in enumerate(self.token_defs, start=2):        
+            defn = self.token_defs[name]
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
-            if defn[0:3] != 're':          # Add char:token_name pairing to dict 
+            if defn[0][0:2] != 're':          # Add char:token_name pairing to dict 
                 defn = defn[1:-1]           # Remove quotes to avoid double quoting 
                 self.char_to_ttype[defn] = i  
 
             # Generate lexing info sets for NON_PRE_DEF tokens like STRING or NAME
-            # For those cases, 'text' will be a regex
-            if defn[0:3] == 're' or len(defn) > 1: 
+            # For those cases, 'char_set' will be a regex
+
+            # for PRE_DEF: char_set == string
+            # NON_PRE_DEF: char_set == regex pattern object
+
+            if defn[0][0:2] == 're' or len(defn[0]) > 1: 
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 
                 multi_char_type = "NON_PRE_DEF"
 
-                if type(defn) is str:  # PRE_DEF                    
-                    start_set = defn[0]
-                    char_set  = defn 
+                if defn[0][0:2] == 're': # NON_PRE_DEF 
+                    pattern = defn[0][3:]
+                    start_set = defn[1] 
+
+                    if '..' in start_set: 
+                        start, end = start_set[0], start_set[3]
+                        start_set = set( chr(i) for i in range(ord(start), ord(end)+1) ) 
+                    else:
+                        start_set = set(defn[1])
+                    
+                    char_set = re.compile(pattern=pattern)
+
+                else:  # PRE_DEF                    
+                    start_set = set(defn[0][0])
+                    char_set  = defn[0]
                     multi_char_type = "PRE_DEF"
                     self.keywords[defn] = 1
 
-                elif type(defn) is Node: 
-                    # Compute the start_set for each Non-predefined token:               
-                    start_set = self.compute_char_set(defn.nodes[0])
-                    if len(defn.nodes)==1: pass
-                    char_set = defn 
-                        
-                
                 token_name = name                 
 
-                self.multi_char_lexers.append((start_set, 
+                self.multi_char_lexers.append(
+                                                (
+                                                start_set, 
                                                 char_set, 
                                                 token_name, 
-                                                multi_char_type))
+                                                multi_char_type,
+                                                )
+                                            )
 
-    def read_tokens(self, fpath):
+    def _read_tokens(self, fpath):
+        """ Accepts path to file containing token definitions.
+            Returns: Nothing but...
+
+            Fills in self.token_defs with: 
+                
+                A dictionary of token_name -> definiton_list 
+
+            definition_list : Is usually a list of length 1 containing the actual token text as a string
+
+            For single char tokens and pre-defined multi char tokens (like 'while') this will be the case.
+
+            For non-pre-defined multi-char tokens, like NAME ( A to Z, one or more times), the list will 
+            contain the following items:
+
+                A regex describing the token as a string ; The start set of the token as a string
+
+            The regex string will look like this: "re(<regex_string>)" 
+            The start set might look like this: "A..Z" (A to Z) or be a singe char
+        """
         lines = []
         with open(fpath) as f: 
             # Get to the token portion of the grammar file:
@@ -110,9 +144,10 @@ class Lexer:
         token_defs = {}
         for line in lines: 
             lexical_tkns = line.split()            
-            k,v = lexical_tkns[0:2]
+            k,v = lexical_tkns[0], lexical_tkns[1:]
             token_defs[k] = v
-        return token_defs
+        
+        self.token_defs = token_defs
 
     def _strip_quotes(self, name):
         """" Strips single quotes on both sides of a string if present"""
@@ -120,7 +155,7 @@ class Lexer:
             return name[1:-1]
         return name 
 
-    def consume(self):
+    def _consume(self):
         """ Increments the char pointer int 'p' by one and sets 
             'c' to the next char in the input string """
         self.p += 1
@@ -135,34 +170,34 @@ class Lexer:
                 self.char_pos = 0
                 self.line_num += 1 
     
-    def rewind(self, n: int):
+    def _rewind(self, n: int):
         """ Rewinds the character stream by 'n' characters. 
             Sets self.p = self.p - n
             Then, sets self.c = self.p  """
         self.p = self.p - n 
         self.c = self.input[self.p]
 
-    def match(self, token_type: int):
+    def _match(self, token_type: int):
         if self.c == token_type: 
-            self.consume()
+            self._consume()
         else: 
             raise Exception(f"Expecting {token_type}; found {self.c}")
 
-    def getTokenName(self, token_type: int) -> str:
+    def _getTokenName(self, token_type: int) -> str:
         """ Returns the name of a token type given token type as an int.
         
-            Example: getTokenName(0)    ->    returns "NAME" 
+            Example: _getTokenName(0)    ->    returns "NAME" 
         """
         return self.tokenNames[token_type]
     
-    def getTokenType(self, token_text: str) -> int:
+    def _getTokenName(self, token_text: str) -> int:
         """ Returns the token type as an int of a token given text of the token.
             
-            Example: getTokenType('}')      ->  returns < an int > 
+            Example: _getTokenName('}')      ->  returns < an int > 
         """
         return self.char_to_ttype[token_text]
 
-    def getTokenNameFromText(self, token_text: str)  -> str:
+    def _getTokenNameFromText(self, token_text: str)  -> str:
         """ Returns the token name as a string for a given token text string.
             
             Example: getTokenNameFromText('print')   ->   returns "PRINT" 
@@ -172,46 +207,16 @@ class Lexer:
         """
         if token_text.isupper(): return token_text
         if token_text not in self.char_to_ttype: return "NOT_A_TOKEN"
-        return self.getTokenName( self.getTokenType(token_text) )
-
-    # TODO: Make VV accept an "end of sequence" function 
-    #       while char_selector(self.c) and not end_of_sequence(self.c):
-    #       
-    def parseMultiChar(self, token_type: int, char_selector, end_of_seq=None) -> Token:
-        """ Used to parse multi char tokens. 
-            * char_selector: Function for recognizing a given char
-            * token_type: The type the returned token should be.
-            
-            @Return: A Token of type 'token_type' """
-        multichar = self.c
-        self.consume()
-        if end_of_seq:
-            while char_selector(self.c):
-                multichar += self.c
-                self.consume()
-            if end_of_seq(self.c):
-                multichar += self.c
-                self.consume()
-            else: 
-                raise Exception(f"Invalid character: {self.c} on line {self.line_num}, position {self.char_pos}")
-        else:
-            while char_selector(self.c):
-                multichar += self.c
-                self.consume()
-        
-        # Check if multichar is a keyword token: If so, override token_type
-        if multichar in self.keywords: token_type = self.getTokenType(multichar)
-        # -------------------------------------------------------------
-        return Token(token_type, multichar, self.getTokenName(token_type), self.line_num, self.char_pos)
+        return self._getTokenName( self._getTokenName(token_text) )
 
     def _WS(self):
         """ Consumes whitespace until a non-whitespace char is encountered. """
-        while self.c in [' ','\t','\n','\r']: self.consume()
+        while self.c in [' ','\t','\n','\r']: self._consume()
     
     def _comment(self):
         """ Skips comments, lines that start with a '#', by consuming chars until a new line is encountered. """
         while self.c != '\n': 
-            self.consume()      # Consume the comment,         
+            self._consume()      # Consume the comment,         
 
     def nextToken(self) -> Token:
         """ Returns the next char in the input string. 
@@ -237,9 +242,8 @@ class Lexer:
                 #      ...  is a function which checks if the char is a member for Non-Pre-Defined ... 
 
                 # Skip the body unless we have self.c == a start character (or be a member of a given char set)
-                if   multi_char_type == "PRE_DEF"     and self.c != start_set:   continue
-                elif multi_char_type == "NON_PRE_DEF" and type(start_set) == set and self.c not in start_set: 
-                    continue
+                if   multi_char_type == "PRE_DEF"     and self.c not in start_set:  continue
+                elif multi_char_type == "NON_PRE_DEF" and self.c not in start_set:  continue
                 
                 multi_char = ""
 
@@ -247,29 +251,47 @@ class Lexer:
                     for i,c in enumerate(char_set, start=1):
                         if self.c != c: break
                         multi_char += c
-                        self.consume()                    
+                        self._consume()                    
                     else:
                         ttype = self.char_to_ttype[multi_char]
-                        return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos)
+                        return Token(ttype, multi_char, self._getTokenName(ttype), self.line_num, self.char_pos)
 
                     # Check if we lexed a single char token:
                     if len(multi_char) == 1 and multi_char in self.char_to_ttype:
                         ttype = self.char_to_ttype[multi_char]
-                        return Token(ttype, multi_char, self.getTokenName(ttype), self.line_num, self.char_pos)
+                        return Token(ttype, multi_char, self._getTokenName(ttype), self.line_num, self.char_pos)
 
-                    # If not that, rewind the char stream. We might have started to lex
-                    # 'else' when we were actually trying to lex 'elif'. In that case we would 
-                    # rewind by 2 chars and try lexing again:
+                    # If no tokens were sucessfully lexed, rewind the char stream if needed:
                     elif len(multi_char) > 0:                      
-                        self.rewind(i)
+                        self._rewind(i)
+
+                    # Why rewind? An example:
+                    #   We may have attempted to lex the the phrase 'elif' as 'else' because
+                    #   they both start with 'el'. If this happened, rewind the char stream by
+                    #   2 chars and try lexing again.
+
+                elif multi_char_type == "NON_PRE_DEF":
                     
+                    # Using regex: 
+                    # 1. Add characters to multi_char until you have a match
+                    # 2. Then, add 1 more char, check if match. 
+
+                    # 3. If it is a match repeat steps 2 and 3 
+                    #    If it is not a match, stop and return the string
+
+                    # NOTE: Using this method will allow you to return an error like:
+
+                        # " Reached EOF while attempting to parse a STRING on line X. 
+                        #   You may have forgotten a closing quote somewhere. "
+
+                    pass
                
             # Handle single character tokens:
             # ----------------------------------------
             for c,ttype in self.char_to_ttype.items():
                 if self.c == c and ttype != "NON_PRE_DEF": 
-                    self.consume()
-                    tkn = Token(ttype, c, self.getTokenName(ttype), self.line_num, self.char_pos)
+                    self._consume()
+                    tkn = Token(ttype, c, self._getTokenName(ttype), self.line_num, self.char_pos)
                     #print(tkn)
                     return tkn
 
@@ -277,7 +299,7 @@ class Lexer:
             raise Exception(f"Invalid character: < {self.c}; ord: {ord(self.c)} > on line {self.line_num}, position {self.char_pos}")
 
         
-        new_token = Token(self.EOF_TYPE, "<EOF>", self.getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)
+        new_token = Token(self.EOF_TYPE, "<EOF>", self._getTokenName(self.EOF_TYPE), self.line_num, self.char_pos)
         return new_token
 
             

@@ -425,7 +425,7 @@ class GrammarReader:
             
             @ Return:
             rule_tokens - A list of rule_token lists, one per rule
-            lookahead_sets  - A dict of rule_name to it's predictor (lexical token) - These are auto-generated now?
+            lookahead_sets  - A dict of rule_name to it's look_ahead_set_string (lexical token) - These are auto-generated now?
         """        
         with open(grammar_file_path) as f:
             
@@ -469,8 +469,8 @@ class GrammarReader:
 
                 tokens = line.split()
 
-                rule_name, predictor = tokens[0], tokens[2]
-                self.lookahead_sets[rule_name] = predictor
+                rule_name, look_ahead_set_string = tokens[0], tokens[2]
+                self.lookahead_sets[rule_name] = look_ahead_set_string
 
     def _generate_lookahead_sets(self):
         # ------------------------------------------------------------------
@@ -481,7 +481,7 @@ class GrammarReader:
 
         def build_predicate_text(node):             
             #print('(', node.name, ',', end='')
-            #print("trying to get predictor for:", node.name)   
+            #print("trying to get look_ahead_set_string for:", node.name)   
             name = node.name
 
             if name == '^': name = node.nodes[0]
@@ -507,26 +507,26 @@ class GrammarReader:
             name = rule.name 
             fnode = rule.nodes[0]
             
-            predictor = ""
+            look_ahead_set_string = ""
 
             if fnode.name == "SUB_RULE": # Reach in, get the actual first node
                 fnode = fnode.nodes[0]
 
             if fnode.name == "|": 
                 token_names = [ build_predicate_text( node ) for node in fnode.nodes ]                        
-                predictor = '|'.join(token_names)
+                look_ahead_set_string = '|'.join(token_names)
             
             elif fnode.name in '*+':
-                predictor = build_predicate_text( fnode.nodes[0] )
+                look_ahead_set_string = build_predicate_text( fnode.nodes[0] )
             
             else: 
                 if fnode.name[0] == '$': # Ignore artificial AST nodes:
                     fnode = rule.nodes[1]
-                predictor = build_predicate_text( fnode )
+                look_ahead_set_string = build_predicate_text( fnode )
             
             # Temporary........................................... see init in lexer? for info
-            if name == "STRING": predictor = 'STRING'
-            self.lookahead_sets[name] = predictor
+            if name == "STRING": look_ahead_set_string = 'STRING'
+            self.lookahead_sets[name] = look_ahead_set_string
             #print("Preds:", self.lookahead_sets)
 
         for rule in self.rules: 
@@ -546,6 +546,14 @@ class ParserGenerator( GrammarReader ):
         super().__init__(grammar_file_path, mode='rule')
         self.source_code = []   # A list containing each line of generated source code 
 
+        self.indent = 0 
+    
+    def _incr_indent(self):
+        self.indent += 1
+
+    def _decr_indent(self):
+        self.indent -= 1
+
     def _strip_quotes(self, name):
         """ Strips single quotes on both sides of a string if present"""
         if len(name) >= 3 and name[0] == r"'" and name[-1] == r"'":
@@ -554,35 +562,35 @@ class ParserGenerator( GrammarReader ):
 
     def build_cmpd_stat(self, token, keyword, end_conditon=None):
         """ Returns a complete if/elif/while statement """
-        predictor = []
+        look_ahead_set_string = []
         name = self._strip_quotes(token.name)                
-        predictor = self.lookahead_sets[name]         
+        look_ahead_set_string = self.lookahead_sets[name]         
 
         """ 
-        'predictor' is an auto-generated string which describes the lookahead "set" of given rule.
-        'predictor might look like:
+        'look_ahead_set_string' is an auto-generated string which describes the lookahead "set" of given rule.
+        'look_ahead_set_string might look like:
                
          NAME|STRING&NUMBER|NUMBER
          So the lookahead set here is NAME or STRING + NUMBER or just NUMBER.
         """
 
         # Parse the lookahead set-string:
-        preds = []
-        for p in predictor.split('|'):                            
+        lk_ah_sets = []
+        for p in look_ahead_set_string.split('|'):                            
             if '&' in p:                        
                 p = p.split('&')                                
-            preds.append(p)
+            lk_ah_sets.append(p)
         
         cur_line = f"{keyword} "
         comp_op = '=='
         
         if keyword == 'while' and end_conditon:
             name = self._strip_quotes(end_conditon.name)
-            preds = [self.lookahead_sets[name]]    
+            lk_ah_sets = [self.lookahead_sets[name]]    
             comp_op = '!='    
 
         # Construct a test statement using the look ahead set for the given rule we might want to parse:
-        for k,p in enumerate(preds, start=1):
+        for k,p in enumerate(lk_ah_sets, start=1):
             if type(p) is list:   # List means x AND y AND z etc etc
                 if k > 1: cur_line += ' or '
                 cur_line += " ("
@@ -597,8 +605,9 @@ class ParserGenerator( GrammarReader ):
         
         return cur_line
 
-    def add_line(self, text, tab=0): 
-        self.source_code.append('    '*tab+text)
+    def add_line(self, text, tab): 
+        #self.source_code.append('    '*self.indent+text)
+        self.source_code.append('    '*tab + text)
 
     def generate_source_text(self, header, footer): 
         """ Using self.rule_tokens and self.lookahead_sets, generates python parser code.
@@ -626,6 +635,14 @@ class ParserGenerator( GrammarReader ):
                 if child.is_child: 
                     new_text = "lnodes.append( "
                 if child.is_root:                      
+                    # NOTE: Currently, you can't have an optional token
+                    # that also is a candidate for the root AST node. 
+                    # 
+                    # The above 'if optional' clause would cause an if statement
+                    # and the 'temp = root' statement to be on the same indent.
+
+                    # If you add support for that at a later date, test if switching
+                    # tab to ltab works.
                     if tab > 2:
                         self.add_line("temp = root", tab)                        
                     new_text = "root = "
