@@ -71,7 +71,7 @@ class Lexer:
                 self.char_to_ttype[defn] = i  
 
             # Generate lexing info sets for NON_PRE_DEF tokens like STRING or NAME
-            # For those cases, 'text' will be the root of a Node tree 
+            # For those cases, 'text' will be a regex
             if defn[0:3] == 're' or len(defn) > 1: 
                 start_set = 0 # some range (same as char_set for NPD)
                 char_set  = 0 

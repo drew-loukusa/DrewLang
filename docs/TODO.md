@@ -1,3 +1,31 @@
+Current TODO:
+
+*   Working on giving parser_generator.py it's OWN lexer. It was previously 
+    using pythons line split method to "parse" the lines of the grammar, but 
+    I'd like to switch to an actual lexer that won't screw up lexing if you 
+    accidentally forget to insert a space between symbols. 
+
+    The ONLY change occuring right now is how I'm lexing the grammar file. 
+    Everything else should stay the same.
+
+    Current idea:
+        > Fill a buffer with characters
+        > On first char in buffer, check for matches vs single char tokens
+        > As buffer fills:
+            Using pairs of (Starting character set -> Token definition (regex or string))
+            > Use starting character set to select possible token matches then: 
+            > Check vs pre-defined multi-char tokens
+            > Check vs non pre-defined multi-char tokens using regex
+
+*   Think about: Currently I'm using these RuleTokens in a weird way. They don't entirely
+    define the meta-tokens, as in there is not a RuleToken equivelant for each defined 
+    meta-token, but I am using the RuleTokens to build the grammar data structure. 
+    
+    So, they are serving the purpose of lexical tokens. I need to look at improving 
+    RuleTokens to better match the meta-token defs? 
+
+    Biggest thing: Look at how you're using them, come up with possible re-factoring plan.
+
 AST Todo:
 
 *   Grammar support for embedded ^ and AST rewrites is implemented.

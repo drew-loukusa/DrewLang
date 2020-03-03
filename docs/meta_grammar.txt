@@ -1,18 +1,25 @@
-grammar             : rule *                                    ;
+grammar             : rule *                                            ;
 
-rule                : NAME ':' or_tokens * ';'                  ;
+rule                : NAME ':' or_tokens * ast_rewrite ? ';'            ;
 
-or_tokens           : and_tokens ( '|' and_tokens ) *           ; 
-and_tokens          : cmpd_token ( '&' cmpd_token ) *           ;
-cmpd_token          : '~' ? atom ( '*' | '+' | '?' ) ?          ;
-atom                : sub_rule | STRING | rule_invoke | range   ;
+# Note: According to this grammar, you could have an ast rewrite in a rule, but also use the ast operator 
+# to signify what token should be set as root. This is NOT supported by 'parser_generator' and is not 
+# handled in the grammar for simplicities sake. It might work, but doing so may result in unexpected behavior. 
 
-sub_rule            : '(' or_tokens * ')'                       ; 
-STRING              : "'" ~ "'" + "'"                           ;
-rule_invoke         : NAME                                      ; 
-RANGE               : . '..' .                                  ;
+ast_rewrite         : '->' '^(' atom * ')'
 
-NAME                : a..z +                                    ;
+or_tokens           : and_tokens ( '|' and_tokens ) *                   ; 
+and_tokens          : cmpd_token ( '&' cmpd_token ) *                   ;
+cmpd_token          : '~' ? ast_atom ( '*' | '+' | '?' ) ?              ;
+ast_atom            : '^' ? atom                                        ; 
+atom                :  sub_rule | STRING | rule_invoke | range          ; 
+
+sub_rule            : '(' or_tokens * ')'                               ; 
+STRING              : "'" ~ "'" + "'"                                   ;
+rule_invoke         : NAME                                              ; 
+RANGE               : . '..' .                                          ;
+
+NAME                : a..z +                                            ;
 
 LOOKAHEAD_SETS:
 
@@ -22,7 +29,8 @@ STRING      ->  STRING
 
 END
 
-TOKENS:
+TOKENS:     
+# NAME             # Definition     # Start Set 
 AST_ROOT                '^'
 OR                      '|'
 AND                     '&'
@@ -51,9 +59,9 @@ BSLASH                  '\'
 TILDE                   '~'
 WILDCARD                '.'
 RANGE                   '..'
-RULE                    re([a-z]+)
-NUMBER                  re(0-9]+)
-TERMINAL                re([A-Z]+)
-ARTIFICAL_NODE          re(^\$[A-Z]+)
-QUOTED_TERMINAL         re('[^']+')
+RULE                    re([a-z]+)      a..z
+NUMBER                  re([0-9]+)      0..9
+TERMINAL                re([A-Z]+)      A..Z
+ARTIFICAL_NODE          re(^\$[A-Z]+)   $
+QUOTED_TERMINAL         re('[^']+')     ' 
 END
