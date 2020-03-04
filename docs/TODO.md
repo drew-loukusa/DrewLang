@@ -5,17 +5,47 @@ Current TODO:
     I'd like to switch to an actual lexer that won't screw up lexing if you 
     accidentally forget to insert a space between symbols. 
 
-    The ONLY change occuring right now is how I'm lexing the grammar file. 
-    Everything else should stay the same.
+    3/3/2020: 
+    Almost done with using regex for non predefined tokens in parser_gen_lexer.py
+    Just need to create Tokens 
 
-    Current idea:
-        > Fill a buffer with characters
-        > On first char in buffer, check for matches vs single char tokens
-        > As buffer fills:
-            Using pairs of (Starting character set -> Token definition (regex or string))
-            > Use starting character set to select possible token matches then: 
-            > Check vs pre-defined multi-char tokens
-            > Check vs non pre-defined multi-char tokens using regex
+    Also: I think I may want to transition my regular lexer away from using the GrammarReader
+    to help parse non predefined token defs. I could use a regex impl for that.
+
+    Consider this: Tokens are made up of a combo of character classes: Numbers, symbols, and letters
+
+    You could create simple format for describing a token in terms of a set of regexs:
+    For example:
+
+    A number would be: 
+        
+        re('[0-9]+') 
+    
+    But something like a hex number would be:
+
+        re('0', 'x','[0-9]+')
+
+    Why do it like this instead writing them as WHOLE regexes? Because it allows us to 
+    build the token strings incrementally AND check for malformed tokens.
+
+    If we had '0x', that's not a valid hex number since there are no digits on the right.
+
+    But also, it allows us to distinguish between hex and non-hex. In order to lex hex, 
+    it has to have a higher lexical priority than regular numbers, otherwise a hex number like
+    "0x545" would get lexed as "0", then as a name "x", then as another number "545".
+
+    So we try to lex hex numbers first. BUT, if we try to lex a regular number thinking it's a hex
+    number eg '0', then we'll throw an error. That's bad obviously, and that's why we need to use an
+    ordered set of regexs to describe non-pre-defined lexical tokens.
+
+    Using an ordered set of regexes will let us do the following: Say we try to lex the number "0" as a hex
+    number. We'll use the first regex '0' to lex the '0' but then we'll move the second one. Which in this
+    case is just a 'x'. That regex will fail, and then we'll know we're not lexing a hex number, but a 
+    regular number. 
+
+    At this point we can rewind the char stream, and try again.
+
+
 
 *   Think about: Currently I'm using these RuleTokens in a weird way. They don't entirely
     define the meta-tokens, as in there is not a RuleToken equivelant for each defined 

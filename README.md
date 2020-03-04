@@ -1,2 +1,2 @@
 # DrewLang
-A "programming language" by me, Drew. THis "thing" is mostly a way for me to learn about langauge concepts. This is not a fully featured language, not even remotely. 
+A custom programing language by me, Drew. In it's finished state, it will be a high level Python-style language with dynamic typing, but with optional type enforcement. My end goal is to learn the techniques and processes involved in designing and building a programming language and as such I do not intend to develop my language for wider release. 

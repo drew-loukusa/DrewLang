@@ -157,7 +157,9 @@ class Lexer:
 
     def _consume(self):
         """ Increments the char pointer int 'p' by one and sets 
-            'c' to the next char in the input string """
+            'c' to the next char in the input string 
+            
+            Also returns the NEW char pointed at by new 'p' """
         self.p += 1
         if self.p >= len(self.input):
             self.c = self.EOF 
@@ -169,6 +171,8 @@ class Lexer:
             if self.c == '\n': 
                 self.char_pos = 0
                 self.line_num += 1 
+        
+        return self.c
     
     def _rewind(self, n: int):
         """ Rewinds the character stream by 'n' characters. 
@@ -272,20 +276,46 @@ class Lexer:
 
                 elif multi_char_type == "NON_PRE_DEF":
                     
-                    # Using regex: 
-                    # 1. Add characters to multi_char until you have a match
-                    # 2. Then, add 1 more char, check if match. 
+                    # Add the first character to the multi_char:
+                    multi_char += self._consume()               
 
-                    # 3. If it is a match repeat steps 2 and 3 
-                    #    If it is not a match, stop and return the string
+                    # Using regex: 
+                    # Add characters to multi_char until you have a full match
+                    match = None
+                    while (match := char_set.full_match(multi_char)) == None:
+                        multi_char += self._consume()
+
+                    # Then, add 1 more char, check if match: 
+                    multi_char += self._consume()
+                    end_check = char_set.fullmatch(multi_char)
+
+                    # Rewind char stream by 1 if current token ended 1 char before:
+                    if end_check is None: self._rewind(1)
+
+                    # Save the most recent full match:
+                    last_match = end_check if end_check != None else match 
+
+                    # If it is a full match repeat steps 
+                    if end_check is not None:                                                
+                        while (match := char_set.full_match(multi_char)) != None:
+                            last_match = match
+                            multi_char += self._consume()                        
+                        # Rewind since above loop will always go 1 char past end of current token
+                        self._rewind(1) 
+
+                    # If it is not a match, stop and return the original matched string:
+                    if last_match is None:
+                        # Create and return a Token using 'match' 
+                        pass
+                    else:
+                        # Create and return a Token using 'last_match'
+                        pass
 
                     # NOTE: Using this method will allow you to return an error like:
 
                         # " Reached EOF while attempting to parse a STRING on line X. 
                         #   You may have forgotten a closing quote somewhere. "
-
-                    pass
-               
+                        
             # Handle single character tokens:
             # ----------------------------------------
             for c,ttype in self.char_to_ttype.items():
