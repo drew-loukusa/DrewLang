@@ -5,6 +5,12 @@ Current TODO:
     I'd like to switch to an actual lexer that won't screw up lexing if you 
     accidentally forget to insert a space between symbols. 
 
+    3/7/2020: I've decided to go with the SET based regex lexing.
+    I'll implement that in lexer.py, and then delete parser_gen_lexer.py
+    Then I can just use lexer.py in parser_generator.py to lex the grammar file.
+
+    Then I can move on to scoping.
+
     3/3/2020: 
     Almost done with using regex for non predefined tokens in parser_gen_lexer.py
     Just need to create Tokens 
