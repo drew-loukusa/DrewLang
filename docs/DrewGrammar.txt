@@ -71,14 +71,18 @@ dowhile         : 'do' blockstat 'while' test   -> ^( 'do' test blockstat )     
 exprstat        : expr ';'                      -> ^( expr )                                ; 
 classdef        : ^ 'class' NAME blockstat                                                  ;
 
-expr            : term  ( ^ add_op term ) *                                                 ;
+expr            : ^ ( grouping | add_expr | negate_expr )                                   ;
+grouping        : '(' expr ')'                  -> ^( expr )                                ;
+negate_expr     : ^ ( '-' | '!' ) expr                                                      ;
+
+add_expr        : term  ( ^ add_op term ) *                                                 ;
 term            : atom  ( ^ mult_op atom ) *                                                ; 
 atom            : ^ ( NAME |  NUMBER |  STRING |  funccall | dotexpr | 'True' | 'False' )   ;
 test            : '(' boolexpr ')'      -> ^( boolexpr )                                    ;
 
-boolexpr        : expr ( 'or' and_expr ) * ;
-and_expr        : comp_expr ( 'and' comp_expr ) * ; 
-comp_expr       : expr ( cmp_op expr ) ? ; 
+boolexpr        : and_expr ( ^ 'or' and_expr ) * ;
+and_expr        : comp_expr ( ^ 'and' comp_expr ) * ; 
+comp_expr       : expr ( ^ cmp_op expr ) ? ; 
 
 dotexpr         : NAME ^ '.' ( NAME | funccall )                                            ;
 
@@ -118,6 +122,7 @@ END
 TOKENS: 
 # Name of token:      Token Text:           # 
 #---------------------------------
+BANG                    '!'
 COMMA                   ','
 PERIOD                  '.'
 LPAREN                  '('
