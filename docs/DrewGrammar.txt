@@ -55,21 +55,32 @@ statement       :  ^ ( printstat
                 |  exprstat )
                 ;
 
+suite_stat      : ^ ( funccall | assignstat | blockstat )                                   ;
+
 assignstat      : NAME '=' expr ';'                     -> ^( '=' NAME expr )               ; 
 blockstat       : $BLOCKSTAT '{' statement *  '}'       -> ^( $BLOCKSTAT statement )        ; 
 printstat       : 'print' '(' expr ')' ';'              -> ^( 'print' expr )                ;
-ifstat          : 'if' '(' test ')' statement           -> ^( 'if' test statement )         ; 
-whilestat       : 'while' '(' test ')' statement        -> ^( 'while' test statement )      ;
-dowhile         : 'do' blockstat 'while' '(' test ')'   -> ^( 'do' test blockstat )         ;
-exprstat        : expr ';'                              -> ^( expr )                        ; 
+
+ifstat          : ^ 'if' test suite_stat elif_else_stat ?                                   ; 
+elif_else_stat  : ^ $ELIF_ELSE_STAT elifstat * elsestat ?                                   ;
+elifstat        : ^ 'elif' test suite_stat                                                  ;
+elsestat        : ^ 'else' suite_stat                                                       ;
+
+whilestat       : 'while' test suite_stat       -> ^( 'while' test suite_stat )             ;
+dowhile         : 'do' blockstat 'while' test   -> ^( 'do' test blockstat )                 ;
+exprstat        : expr ';'                      -> ^( expr )                                ; 
 classdef        : ^ 'class' NAME blockstat                                                  ;
 
-expr            : term  ( ^ add_op term ) *                                 ;
-term            : atom  ( ^ mult_op atom ) *                                ; 
-atom            : ^ ( NAME |  NUMBER |  STRING |  funccall | dotexpr )      ;
-test            : expr ^ cmp_op expr                                        ;
+expr            : term  ( ^ add_op term ) *                                                 ;
+term            : atom  ( ^ mult_op atom ) *                                                ; 
+atom            : ^ ( NAME |  NUMBER |  STRING |  funccall | dotexpr | 'True' | 'False' )   ;
+test            : '(' boolexpr ')'      -> ^( boolexpr )                                    ;
 
-dotexpr         : NAME ^ '.' ( NAME | funccall )                            ;
+boolexpr        : expr ( 'or' and_expr ) * ;
+and_expr        : comp_expr ( 'and' comp_expr ) * ; 
+comp_expr       : expr ( cmp_op expr ) ? ; 
+
+dotexpr         : NAME ^ '.' ( NAME | funccall )                                            ;
 
 funcdef         : $FUNCDEF 'def' NAME '(' namelist ? ')' blockstat  -> ^( $FUNCDEF NAME namelist blockstat )  ;
 funccall        : NAME '(' exprlist ? ')' ';'                       -> ^( NAME exprlist )             ;
@@ -94,6 +105,7 @@ LOOKAHEAD_SETS:
 
 #namelist -> NAME
 assignstat -> NAME&EQUALS
+#elsestat   -> ELIF|ELSE
 NAME -> NAME
 NUMBER -> NUMBER
 STRING -> STRING
@@ -130,11 +142,17 @@ DASH                    '-'
 FSLASH                  '/'
 BSLASH                  '\'
 IF                      'if' 
+ELIF                    'elif' 
+ELSE                    'else'
 DO                      'do' 
+AND                     'and'
+OR                      'or' 
 WHILE                   'while'
 PRINT                   'print'
 DEF                     'def'
 CLASS                   'class'
+TRUE                    'True' 
+FALSE                   'False' 
 NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
 NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
 STRING                  NON_PRE_DEF     '"' . * '"'              

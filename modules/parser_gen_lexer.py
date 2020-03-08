@@ -302,7 +302,7 @@ class Lexer:
                             multi_char += self._consume()                        
                         # Rewind since above loop will always go 1 char past end of current token
                         self._rewind(1) 
-
+                        
                     # If it is not a match, stop and return the original matched string:
                     if last_match is None:
                         # Create and return a Token using 'match' 
