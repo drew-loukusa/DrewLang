@@ -27,14 +27,6 @@ class Lexer:
     EOF = chr(0)        # Represent EOF char
     EOF_TYPE = 1        # Represent EOF Token type
 
-    # TODO: Make the lexer accept a list of tuples
-    #       Each tuple is THREE funcs: 
-    #                                   start_of_sequence, 
-    #                                   member_of_body,
-    #                                   end_of_sequence
-    #       For multi-char token parsing
-    #       Not every multi char token uses end_of_sequence
-
     def __init__(self, input: str, fpath: str):
         self.input = input              # Duh
         self.p = 0                      # Position in the input string
@@ -75,7 +67,7 @@ class Lexer:
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
             if defn[0][0:2] != 're':          # Add char:token_name pairing to dict 
-                defn = defn[1:-1]           # Remove quotes to avoid double quoting 
+                defn = defn[0][1:-1]           # Remove quotes to avoid double quoting                 
                 self.char_to_ttype[defn] = i  
 
             # Generate lexing info sets for NON_PRE_DEF tokens like STRING or NAME
@@ -328,9 +320,10 @@ class Lexer:
                         sub_multi_char = ""
                         matched_once = False                        
 
-                        while regex.match( sub_multi_char + self.c ):
+                        while regex.fullmatch( sub_multi_char + self.c ):
                             # if there is a match, increment the char stream:                            
-                            sub_multi_char += self._consume()
+                            sub_multi_char += self.c 
+                            self._consume()
                             matched_once = True
                            
                         # When the regex fails to match, 
@@ -347,7 +340,7 @@ class Lexer:
                     else:
                         # If we lexed a token without incident, create and return it:   
                         ttype = getattr(self, t_name)                                                                    
-                        return Token(ttype=ttype, text=multi_char, name=t_name, line_num=self.line_num, char_pos=self.char_pos)
+                        return Token(ttype=ttype, text=multi_char, tname=t_name, line_num=self.line_num, char_pos=self.char_pos)
                         
             # Handle single character tokens:
             # ----------------------------------------
@@ -375,21 +368,16 @@ class Lexer:
 if __name__ == "__main__":
     input = \
 """
-x=0;
-print("Hello world");
-if(x >= 120){
-    print("xis0");
-    x=1;
-
-#cmt
-
-    if ( x == 0 ) print("Aww yeah");    
-}
+$BLOCK
+'print'
+NAME
+NUMBER
+testrulename()
 """
     import os; cwd = os.getcwd()[:-8]
 
-    #lexer = Lexer(input, cwd + "\\grammar_grammar.txt" ) 
-    lexer = Lexer(input, cwd + "\\docs\\DrewGrammar.txt" ) 
+    lexer = Lexer(input, cwd + "DrewLang\\docs\\meta_grammar.txt" ) 
+    #lexer = Lexer(input, cwd + "\\docs\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")
