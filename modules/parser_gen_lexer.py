@@ -372,7 +372,12 @@ $BLOCK
 'print'
 NAME
 NUMBER
-testrulename()
+testrulename
+..
+.
++
+^
+^(
 """
     import os; cwd = os.getcwd()[:-8]
 

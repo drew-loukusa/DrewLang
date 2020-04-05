@@ -378,12 +378,16 @@ class GrammarReader:
 
         rule_tokens = []
 
-        input = " " # Should be a string, pass in a string instead of 'tokens'
+        input_string = " " # Should be a string, pass in a string instead of 'tokens'
 
-        if mode != 'rule': input = ''.join(tokens)
+        if mode == 'rule': 
+            input_string = tokens 
+        else: 
+            input_string = ''.join(tokens)
+
 
         # Create a lexer for lexing rules using the token definitons defined in the meta grammar:        
-        rules_lexer = Lexer(input, self.meta_grammar_fpath)
+        rules_lexer = Lexer(input_string, self.meta_grammar_fpath)
 
         # Process rule name and ':':
         if mode == 'rule':
@@ -441,7 +445,7 @@ class GrammarReader:
             # ------------------------------------------------------------------
             #goto_section("GRAMMAR")
             goto_section("AST")
-            tokens = []
+            tokens = ""
             while "END" not in (line := f.readline()):     
                 # Ignore comments and blank lines:
                 if line[0] == '#' or len(line.rstrip('\n')) == 0: continue
@@ -451,12 +455,13 @@ class GrammarReader:
                 
                 #tokens += (line.split())
                 # NOTE: Testing using lexer inside _convert_text_to_RuleTokens:
-                tokens = line 
+                tokens += line
                 
                 # Once we've collected a rules worth of tokens, process the rule:
-                if tokens[-1] == ';': 
+                if tokens.rstrip()[-1] == ';': 
+                    print(tokens,file=sys.stderr, end='')
                     self.rule_tokens.append(self._convert_text_to_RuleTokens(tokens))
-                    tokens = []
+                    tokens = ""
 
            
             # Read in lookahead_sets: 
@@ -493,7 +498,7 @@ class GrammarReader:
                 if  name[0] == r"'" and name[-1] == r"'":
                     name = name[1:-1]
                      
-            result = lex.getTokenNameFromText( name ) 
+            result = lex._getTokenNameFromText( name ) 
             if result == "NOT_A_TOKEN": 
                 if result not in self.lookahead_sets: 
                     build_predicate(self.rules_dict[name])
