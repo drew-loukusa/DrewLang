@@ -158,8 +158,8 @@ DEF                     'def'
 CLASS                   'class'
 TRUE                    'True' 
 FALSE                   'False' 
-NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) ) *
-NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * 
-STRING                  NON_PRE_DEF     '"' . * '"'              
+NAME                    NON_PRE_DEF     ( ( 'a' .. 'z' ) | ( 'A' .. 'Z' ) | '_' | '-' ) * ;
+NUMBER                  NON_PRE_DEF     ( '0' .. '9' ) * ;
+STRING                  NON_PRE_DEF     '"' . * '"' ;               
 END 
                                         

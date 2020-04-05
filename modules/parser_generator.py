@@ -5,7 +5,7 @@
 
 import os
 import sys
-from lexer import Lexer
+from parser_gen_lexer import Lexer
 from locate_file import check_cache_or_find, find, find_dir
 
 class RuleToken:
@@ -380,6 +380,8 @@ class GrammarReader:
 
         input = " " # Should be a string, pass in a string instead of 'tokens'
 
+        if mode != 'rule': input = ''.join(tokens)
+
         # Create a lexer for lexing rules using the token definitons defined in the meta grammar:        
         rules_lexer = Lexer(input, self.meta_grammar_fpath)
 
@@ -536,7 +538,7 @@ class GrammarReader:
             key = token_text
             #if token_text not in ["NAME", "NUMBER", "STRING"]: # Give quotes to terminals
                 #key = "'" + token_text + "'"
-            self.lookahead_sets[key] = lex.getTokenNameFromText(token_text)
+            self.lookahead_sets[key] = lex._getTokenNameFromText(token_text)
 
         self.rules.reverse()
 

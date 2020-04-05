@@ -67,8 +67,8 @@ class Lexer:
             self.__setattr__(name,i)        # Set instance field            
             self.tokenNames.append(name)    # Add token_name to list of token names
             if defn[0][0:2] != 're':          # Add char:token_name pairing to dict 
-                defn = defn[0][1:-1]           # Remove quotes to avoid double quoting                 
-                self.char_to_ttype[defn] = i  
+                defn[0] = defn[0][1:-1]           # Remove quotes to avoid double quoting                 
+                self.char_to_ttype[defn[0]] = i  
 
             # Generate lexing info sets for NON_PRE_DEF tokens like STRING or NAME
             # For those cases, 'token_definiton' will be a list of regex objects
@@ -76,7 +76,7 @@ class Lexer:
             # for PRE_DEF: token_definiton == string
             # NON_PRE_DEF: token_definiton == list of regex objects
 
-            if False and defn[0][0:2] == 're' or len(defn[0]) > 1: 
+            if defn[0][0:2] == 're' or len(defn[0]) > 1: 
                 start_set = 0 # some range (same as token_definiton for NPD)
                 token_definiton  = 0 
                 multi_char_type = "NON_PRE_DEF"
@@ -97,7 +97,7 @@ class Lexer:
                     start_set = set(defn[0][0])
                     token_definiton  = defn[0]
                     multi_char_type = "PRE_DEF"
-                    self.keywords[defn] = 1
+                    self.keywords[defn[0]] = 1
 
                 token_name = name                 
 
@@ -214,7 +214,7 @@ class Lexer:
         """
         if token_text.isupper(): return token_text
         if token_text not in self.char_to_ttype: return "NOT_A_TOKEN"
-        return self._getTokenName( self._getTokenName(token_text) )
+        return self.tokenNames[self._getTokenTypeFromText(token_text)]
 
     def _WS(self):
         """ Consumes whitespace until a non-whitespace char is encountered. """
@@ -347,7 +347,7 @@ class Lexer:
             for c,ttype in self.char_to_ttype.items():
                 if self.c == c and ttype != "NON_PRE_DEF": 
                     self._consume()
-                    tkn = Token(ttype=ttype, text=c, tname=self._getTokenName(ttype), line_num=self.line_num, char_pos=self.char_pos)
+                    tkn = Token(ttype=ttype, text=c, tname=self._getTokenNameFromType(ttype), line_num=self.line_num, char_pos=self.char_pos)
                     #print(tkn)
                     return tkn
 

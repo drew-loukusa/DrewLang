@@ -57,7 +57,7 @@ class Token:
             text  : The ACTUAL text of the token. Like ')' or 'print'
             tname : The name of the token type as a string 
         """
-        self._tname = tname     # Token type as a string
+        self._tname = tname     # Token type as a string E.G. NAME or NUMBER
         self._type = ttype      # Token type as an int
         self._text = text       # The actual token text
         self._definition = definition # For tokens like NAME where NAME can be: a - z or A - Z one or more times
@@ -267,7 +267,7 @@ class Lexer:
             self.consume()      # Consume the comment,         
 
     def nextToken(self) -> Token:
-        """ Returns the next char in the input string. 
+        """ Returns the next char in the input string as a Token. 
             If there is no next char, returns <EOF> (End of File) """
         while self.c != Lexer.EOF: 
             # Handle Whitespace:
@@ -423,7 +423,7 @@ if(x >= 120){
     import os; cwd = os.getcwd()[:-8]
 
     #lexer = Lexer(input, cwd + "\\grammar_grammar.txt" ) 
-    lexer = Lexer(input, cwd + "\\docs\\DrewGrammar.txt" ) 
+    lexer = Lexer(input, cwd + "DrewLang\\docs\\DrewGrammar.txt" ) 
     #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #print("DLexer Class after initialization:")
     #for k,v in lexer.__dict__.items(): print(f"{k}\t: {v}")

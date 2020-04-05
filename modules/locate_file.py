@@ -36,7 +36,7 @@ def get_path_from_cache(file_name, path_cache_file):
     try:    
         open(path_cache_file, mode='r')
     except FileNotFoundError: 
-        path_cache_file = find(path_cache_file, os.getcwd())
+        path_cache_file = find(path_cache_file, start_dir="C:\\Users")
 
     if path_cache_file == None: 
         raise FileNotFoundError("Unable to locate 'path_cache_file'")
@@ -56,7 +56,19 @@ def check_cache_or_find(file_name, start_dir, path_cache_file) -> str:
 
         If not, it finds the correct path, updates the cache, and returns the path.
     """
-    file_path, path_cache_file = get_path_from_cache(file_name, path_cache_file)
+    file_path = ""    
+
+    # If file path is not in cache, find it, add path to cache and return the file path:
+    if (result := get_path_from_cache(file_name, path_cache_file)) != None:
+        file_path, path_cache_file = result
+
+    else: 
+        file_path = find(file_name, start_dir)   
+        open(path_cache_file, mode='w').write(file_name + '; ' + file_path)    
+        return file_path 
+
+    # If the file path WAS in the cache, check that it is correct. If it is not, re-find it, 
+    # update the path string in the path cache and return the path:
     file_path = file_path.rstrip('\n')
     try: 
         open(file_path, mode='r')
